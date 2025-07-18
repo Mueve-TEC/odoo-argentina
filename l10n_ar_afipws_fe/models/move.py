@@ -581,9 +581,44 @@ print "Observaciones:", wscdc.Obs
             moneda_ctz = inv.currency_id.rate
             if not moneda_id:
                 raise ValidationError('No esta definido el codigo AFIP en la moneda')
+
+            if not commercial_partner.l10n_ar_afip_responsibility_type_id:
+                raise UserError(_(
+                    'El partner %s no tiene configurado el Tipo de Responsabilidad AFIP. '
+                    'Por favor configúrelo en Contactos > %s > Información de Facturación') % (
+                    commercial_partner.name, commercial_partner.name))
+            
+            if not commercial_partner.l10n_ar_afip_responsibility_type_id.code:
+                raise UserError(_(
+                    'El Tipo de Responsabilidad AFIP del partner %s no tiene código configurado') % 
+                    commercial_partner.name)
+            
             cond_iva_receptor = commercial_partner.l10n_ar_afip_responsibility_type_id.code
 
             CbteAsoc = inv.get_related_invoices_data()
+
+            ## Verificación de cond_iva_receptor en el fork de pyafipws
+            # import pyafipws
+            # from pyafipws import wsfev1
+            # import inspect
+
+            # _logger.info('=== VERIFICACIÓN PYAFIPWS ===')
+
+            # # Verificar que el fork esté funcionando
+            # sig = inspect.signature(wsfev1.WSFEv1.CrearFactura)
+            # params = list(sig.parameters.keys())
+            # _logger.info('Parámetros CrearFactura (%d total): %s' % (len(params), params))
+
+            # if 'cond_iva_receptor' in params:
+            #     _logger.info('✓ Fork modificado confirmado - cond_iva_receptor disponible')
+            # else:
+            #     _logger.error('✗ Fork NO detectado - cond_iva_receptor no disponible')
+
+            _logger.info('=== PARÁMETROS ENVIADOS A AFIP ===')
+            _logger.info('cond_iva_receptor value: "%s" (type: %s)' % (cond_iva_receptor, type(cond_iva_receptor)))
+            _logger.info('commercial_partner: %s' % commercial_partner.name)
+            _logger.info('responsibility_type: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.name)
+            _logger.info('responsibility_code: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.code)
 
             # create the invoice internally in the helper
             if afip_ws == 'wsfe':
@@ -594,16 +629,6 @@ print "Observaciones:", wscdc.Obs
                     cbt_desde, cbt_hasta, imp_total, imp_tot_conc, imp_neto,
                     imp_iva,
                     imp_trib, imp_op_ex, fecha_cbte, fecha_venc_pago,
-                    fecha_serv_desde, fecha_serv_hasta,
-                    moneda_id, round(moneda_ctz,2),
-                    cond_iva_receptor
-                )
-                _logger.info('Creando Factura en AFIP')
-                _logger.info(
-                    "concepto: %s, tipo_doc: %s, nro_doc: %s, doc_afip_code: %s, pos_number: %s, cbt_desde: %s, cbt_hasta: %s, imp_total: %s, imp_tot_conc: %s, imp_neto: %s, imp_iva: %s, imp_trib: %s, imp_op_ex: %s, fecha_cbte: %s, fecha_venc_pago: %s, fecha_serv_desde: %s, fecha_serv_hasta: %s, moneda_id: %s, moneda_ctz: %.2f, cond_iva_receptor: %s",
-                    concepto, tipo_doc, nro_doc, doc_afip_code, pos_number,
-                    cbt_desde, cbt_hasta, imp_total, imp_tot_conc, imp_neto,
-                    imp_iva, imp_trib, imp_op_ex, fecha_cbte, fecha_venc_pago,
                     fecha_serv_desde, fecha_serv_hasta,
                     moneda_id, round(moneda_ctz,2),
                     cond_iva_receptor
