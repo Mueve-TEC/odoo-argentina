@@ -1,8 +1,12 @@
 from odoo import fields, models, _, api
+from odoo.exceptions import UserError
 from functools import partial
 
 import json
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 class PosOrder(models.Model):
     _inherit = 'pos.order'
@@ -43,8 +47,20 @@ class PosOrder(models.Model):
         values['to_invoice'] = True
         return super(PosOrder, self).create(values)
 
-    def action_pos_order_invoice(self):
+
+    def _is_electronic_invoice_journal(self, journal):
+        """Check if a journal is configured for AFIP electronic invoicing"""
+        return (
+            journal.l10n_ar_afip_pos_system in ['RLI_RLM', 'FEERCEL'] and
+            hasattr(journal, 'afip_ws') and
+            journal.afip_ws
+        )
+
+
+    def _generate_pos_order_invoice(self):
+        """Override to integrate AFIP validation for electronic invoices"""
         moves = self.env['account.move']
+        logger.info('Generating invoices for POS orders during validation: %s', self.mapped('name'))
 
         for order in self:
             # Force company for all SUPERUSER_ID action
@@ -53,15 +69,42 @@ class PosOrder(models.Model):
                 continue
 
             if not order.partner_id:
+                logger.info('No partner for order %s, skipping invoice creation', order.name)
                 raise UserError(_('Please provide a partner for the sale.'))
 
             move_vals = order._prepare_invoice_vals()
             new_move = order._create_invoice(move_vals)
 
             order.write({'account_move': new_move.id, 'state': 'invoiced'})
-            new_move.sudo().with_company(order.company_id).action_post()
+
+            # Check if journal is configured for AFIP electronic invoicing
+            is_electronic_journal = order._is_electronic_invoice_journal(new_move.journal_id)
+
+            if is_electronic_journal:
+                logger.info('Processing electronic invoice %s for POS order %s', new_move.name, order.name)
+                
+                try:
+                    # Post the invoice to trigger AFIP validation
+                    new_move.sudo().with_company(order.company_id).action_post()
+                    logger.info('Electronic invoice %s processed successfully', new_move.name)
+                    logger.info('AFIP CAE for invoice %s: %s', new_move.name, new_move.afip_auth_code)    
+
+                except Exception as e:
+                    logger.error('Error processing electronic invoice %s: %s', new_move.name, str(e))
+                    # Keep invoice in draft state and show error message
+                    new_move.message_post(body=_('Error processing electronic invoice: %s') % str(e))
+                    
+                    raise UserError(_('Error processing AFIP electronic invoice: %s') % str(e))
+                    
+            else:
+                # For non-electronic invoices, we use the standard post method
+                new_move.sudo().with_company(order.company_id).with_context(skip_invoice_sync=True)._post()
+
             moves += new_move
-            order._apply_invoice_payments()
+            payment_moves = order._apply_invoice_payments(order.session_id.state == 'closed')
+            if order.session_id.state == 'closed':  # If the session isn't closed this isn't needed.
+                # If a client requires the invoice later, we need to revers the amount from the closing entry, by making a new entry for that.
+                order._create_misc_reversal_move(payment_moves)
 
         if not moves:
             return {}

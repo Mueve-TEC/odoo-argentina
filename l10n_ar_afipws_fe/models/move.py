@@ -619,6 +619,14 @@ print "Observaciones:", wscdc.Obs
             _logger.info('commercial_partner: %s' % commercial_partner.name)
             _logger.info('responsibility_type: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.name)
             _logger.info('responsibility_code: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.code)
+            _logger.info('imp_iva: %s' % imp_iva)
+            _logger.info('imp_neto: %s' % imp_neto)
+            _logger.info('imp_tot_conc: %s' % imp_tot_conc)
+            _logger.info('imp_trib: %s' % imp_trib)
+            _logger.info('imp_op_ex: %s' % imp_op_ex)
+            _logger.info('moneda_id: %s' % moneda_id)
+            _logger.info('moneda_ctz: %s' % moneda_ctz)
+            
 
             # create the invoice internally in the helper
             if afip_ws == 'wsfe':
