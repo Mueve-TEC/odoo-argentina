@@ -597,37 +597,6 @@ print "Observaciones:", wscdc.Obs
 
             CbteAsoc = inv.get_related_invoices_data()
 
-            ## Verificación de cond_iva_receptor en el fork de pyafipws
-            # import pyafipws
-            # from pyafipws import wsfev1
-            # import inspect
-
-            # _logger.info('=== VERIFICACIÓN PYAFIPWS ===')
-
-            # # Verificar que el fork esté funcionando
-            # sig = inspect.signature(wsfev1.WSFEv1.CrearFactura)
-            # params = list(sig.parameters.keys())
-            # _logger.info('Parámetros CrearFactura (%d total): %s' % (len(params), params))
-
-            # if 'cond_iva_receptor' in params:
-            #     _logger.info('✓ Fork modificado confirmado - cond_iva_receptor disponible')
-            # else:
-            #     _logger.error('✗ Fork NO detectado - cond_iva_receptor no disponible')
-
-            _logger.info('=== PARÁMETROS ENVIADOS A AFIP ===')
-            _logger.info('cond_iva_receptor value: "%s" (type: %s)' % (cond_iva_receptor, type(cond_iva_receptor)))
-            _logger.info('commercial_partner: %s' % commercial_partner.name)
-            _logger.info('responsibility_type: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.name)
-            _logger.info('responsibility_code: %s' % commercial_partner.l10n_ar_afip_responsibility_type_id.code)
-            _logger.info('imp_iva: %s' % imp_iva)
-            _logger.info('imp_neto: %s' % imp_neto)
-            _logger.info('imp_tot_conc: %s' % imp_tot_conc)
-            _logger.info('imp_trib: %s' % imp_trib)
-            _logger.info('imp_op_ex: %s' % imp_op_ex)
-            _logger.info('moneda_id: %s' % moneda_id)
-            _logger.info('moneda_ctz: %s' % moneda_ctz)
-            
-
             # create the invoice internally in the helper
             if afip_ws == 'wsfe':
                 moneda_ctz = 1 / moneda_ctz
