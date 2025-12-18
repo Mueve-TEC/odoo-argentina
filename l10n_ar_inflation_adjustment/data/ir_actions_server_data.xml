@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Acción de servidor para asignar tag "No Monetaria" a las cuentas -->
+    <record id="action_set_non_monetary_tag" model="ir.actions.server">
+        <field name="name">Asignar Tag "No Monetaria" a Cuentas</field>
+        <field name="model_id" ref="account.model_account_account" />
+        <field name="binding_model_id" ref="account.model_account_account" />
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+if records:
+    non_monetary_tag = env['account.account']._get_non_monetary_tag()
+    if non_monetary_tag:
+        non_monetary_types = env['account.account'].NON_MONETARY_ACCOUNT_TYPES
+        accounts_to_tag = records.filtered(
+            lambda a: a.account_type in non_monetary_types and non_monetary_tag.id not in a.tag_ids.ids
+        )
+        if accounts_to_tag:
+            accounts_to_tag.write({'tag_ids': [(4, non_monetary_tag.id)]})
+]]></field>
+    </record>
+
+    <!-- Acción de servidor para asignar tag a TODAS las cuentas de la compañía -->
+    <record id="action_set_non_monetary_tag_all" model="ir.actions.server">
+        <field name="name">Asignar Tag "No Monetaria" a Todas las Cuentas</field>
+        <field name="model_id" ref="account.model_account_account" />
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+env['account.account'].set_non_monetary_tag(env.company)
+]]></field>
+    </record>
+
+    <!-- Acción de servidor para quitar tag "No Monetaria" -->
+    <record id="action_remove_non_monetary_tag" model="ir.actions.server">
+        <field name="name">Quitar Tag "No Monetaria" de Cuentas</field>
+        <field name="model_id" ref="account.model_account_account" />
+        <field name="binding_model_id" ref="account.model_account_account" />
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code"><![CDATA[
+if records:
+    non_monetary_tag = env['account.account']._get_non_monetary_tag()
+    if non_monetary_tag:
+        accounts_with_tag = records.filtered(lambda a: non_monetary_tag.id in a.tag_ids.ids)
+        if accounts_with_tag:
+            accounts_with_tag.write({'tag_ids': [(3, non_monetary_tag.id)]})
+]]></field>
+    </record>
+
+</odoo>

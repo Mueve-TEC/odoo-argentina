@@ -1,0 +1,27 @@
+# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+{
+    'name': 'Argentina - Ajuste por Inflación',
+    'version': "16.0.1.0.0",
+    'category': 'Accounting',
+    'sequence': 14,
+    'summary': 'Ajuste por inflación contable para cierre de ejercicio fiscal argentino',
+    'author': 'Mueve',
+    'website': 'https://mueve.org.ar/',
+    'license': 'AGPL-3',
+    'depends': [
+        'account',
+        'l10n_ar',
+    ],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/account_account_tag_data.xml',
+        'data/inflation_adjustment_index_data.xml',
+        'data/ir_actions_server_data.xml',
+        'views/inflation_adjustment_index_views.xml',
+        'views/account_account_views.xml',
+        'wizards/inflation_adjustment_wizard_view.xml',
+        'views/menu_views.xml',
+    ],
+    'application': False,
+    'post_init_hook': 'post_init_hook',
+}

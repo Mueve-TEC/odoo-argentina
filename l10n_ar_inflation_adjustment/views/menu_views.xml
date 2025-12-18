@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Menú principal de Ajuste por Inflación dentro de Contabilidad -->
+    <menuitem id="menu_inflation_adjustment_root"
+        name="Ajuste por Inflación"
+        parent="account.menu_finance_configuration"
+        sequence="50" />
+
+    <!-- Submenú: Índices de Inflación -->
+    <menuitem id="menu_inflation_adjustment_index"
+        name="Índices IPC (INDEC)"
+        parent="menu_inflation_adjustment_root"
+        action="action_inflation_adjustment_index"
+        sequence="10" />
+
+    <!-- Menú para el Wizard en Contabilidad > Acciones -->
+    <menuitem id="menu_inflation_adjustment_wizard"
+        name="Generar Ajuste por Inflación"
+        parent="account.menu_finance_entries_actions"
+        action="action_inflation_adjustment_wizard"
+        sequence="100" />
+
+</odoo>

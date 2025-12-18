@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extensión de la vista de cuenta contable para mostrar campo ajustable -->
+    <record id="view_account_form_inherit_inflation" model="ir.ui.view">
+        <field name="name">account.account.form.inherit.inflation</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='deprecated']" position="after">
+                <field name="inflation_adjustable" readonly="1" />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Extensión de la vista tree de cuentas -->
+    <record id="view_account_list_inherit_inflation" model="ir.ui.view">
+        <field name="name">account.account.tree.inherit.inflation</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_list" />
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='account_type']" position="after">
+                <field name="inflation_adjustable" optional="hide" />
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Filtro para cuentas ajustables por inflación -->
+    <record id="view_account_search_inherit_inflation" model="ir.ui.view">
+        <field name="name">account.account.search.inherit.inflation</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_search" />
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='activeacc']" position="after">
+                <separator />
+                <filter name="filter_inflation_adjustable" string="Ajustables por Inflación"
+                    domain="[('inflation_adjustable', '=', True)]" />
+                <filter name="filter_not_inflation_adjustable" string="No Ajustables (Monetarias)"
+                    domain="[('inflation_adjustable', '=', False)]" />
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

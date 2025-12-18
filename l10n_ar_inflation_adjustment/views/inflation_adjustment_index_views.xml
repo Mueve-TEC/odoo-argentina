@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista Tree para Índices de Inflación -->
+    <record id="inflation_adjustment_index_view_tree" model="ir.ui.view">
+        <field name="name">inflation.adjustment.index.tree</field>
+        <field name="model">inflation.adjustment.index</field>
+        <field name="arch" type="xml">
+            <tree string="Índices de Inflación">
+                <field name="date" />
+                <field name="value" />
+                <field name="variation" optional="show" />
+                <field name="annual_variation" optional="show" />
+                <field name="xml_id" optional="hide" />
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form para Índices de Inflación -->
+    <record id="inflation_adjustment_index_view_form" model="ir.ui.view">
+        <field name="name">inflation.adjustment.index.form</field>
+        <field name="model">inflation.adjustment.index</field>
+        <field name="arch" type="xml">
+            <form string="Índice de Inflación">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="date" class="oe_inline" />
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date" />
+                            <field name="value" />
+                        </group>
+                        <group>
+                            <field name="variation" />
+                            <field name="annual_variation" />
+                            <field name="xml_id" readonly="1" />
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Search para Índices de Inflación -->
+    <record id="inflation_adjustment_index_view_search" model="ir.ui.view">
+        <field name="name">inflation.adjustment.index.search</field>
+        <field name="model">inflation.adjustment.index</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Índices">
+                <field name="date" />
+                <field name="value" />
+                <filter name="filter_current_year" string="Año Actual"
+                    domain="[('date', '>=', (context_today().replace(month=1, day=1))), 
+                                 ('date', '&lt;=', context_today())]" />
+                <filter name="filter_last_year" string="Año Anterior"
+                    domain="[('date', '>=', (context_today() - relativedelta(years=1)).replace(month=1, day=1)),
+                                 ('date', '&lt;=', (context_today() - relativedelta(years=1)).replace(month=12, day=31))]" />
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_year" string="Año" context="{'group_by': 'date:year'}" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Graph para Índices de Inflación -->
+    <record id="inflation_adjustment_index_view_graph" model="ir.ui.view">
+        <field name="name">inflation.adjustment.index.graph</field>
+        <field name="model">inflation.adjustment.index</field>
+        <field name="arch" type="xml">
+            <graph string="Evolución del IPC" type="line">
+                <field name="date" type="col" />
+                <field name="value" type="measure" />
+            </graph>
+        </field>
+    </record>
+
+    <!-- Vista Pivot para Índices de Inflación -->
+    <record id="inflation_adjustment_index_view_pivot" model="ir.ui.view">
+        <field name="name">inflation.adjustment.index.pivot</field>
+        <field name="model">inflation.adjustment.index</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Índices">
+                <field name="date" type="row" interval="year" />
+                <field name="date" type="col" interval="month" />
+                <field name="value" type="measure" />
+                <field name="variation" type="measure" />
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Acción para Índices de Inflación -->
+    <record id="action_inflation_adjustment_index" model="ir.actions.act_window">
+        <field name="name">Índices de Inflación (IPC)</field>
+        <field name="res_model">inflation.adjustment.index</field>
+        <field name="view_mode">tree,form,graph,pivot</field>
+        <field name="search_view_id" ref="inflation_adjustment_index_view_search" />
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cargar índices de inflación
+            </p>
+            <p>
+                Los índices de precios al consumidor (IPC) son publicados
+                mensualmente por el INDEC y se utilizan para calcular el
+                ajuste por inflación contable según la normativa argentina.
+            </p>
+        </field>
+    </record>
+
+</odoo>
