@@ -20,7 +20,6 @@ requerido por la normativa argentina al momento del cierre del ejercicio fiscal.
 **Características principales:**
 
 * Compatible con Odoo Community Edition 16.0
-* Independiente de módulos Enterprise (no requiere ``account_reports``)
 * Utiliza los índices IPC publicados por INDEC
 * Implementa las normas RT 6, RT 17 y RT 48 de FACPCE
 * Genera automáticamente el asiento de ajuste por inflación
@@ -122,10 +121,10 @@ Configuración
    
    El módulo incluye índices históricos. Agregar índices faltantes si es necesario.
 
-3. **Crear Cuenta RECPAM**:
+3. **Crear o Identificar Cuenta RECPAM**:
    
-   Crear o identificar la cuenta donde se registrará el resultado por inflación.
-   Usualmente es una cuenta de resultados financieros.
+   Esta es la cuenta donde se registrará el resultado por inflación.
+   Usualmente es una cuenta de resultados financieros. En nuestra implementación es la cuenta **"5.6.1.01.070 R.E.C.P.A.M."**.
 
 Generar Ajuste por Inflación
 ----------------------------
@@ -144,18 +143,16 @@ Autores
 -------
 
 * ADHOC SA
-* Universidad Nacional de Córdoba
+* [Fundación Mueve](https://mueve.org.ar)
 
 Contribuidores
 --------------
 
-* Juan José Scarafía <jjs@adhoc.com.ar>
 * Ezequiel Ludueña
 
 Mantenedores
 ------------
 
-Este módulo es mantenido por la comunidad.
+Este módulo es mantenido por Fundación Mueve.
 
-Para reportar errores o solicitar funcionalidades, visite:
-https://github.com/ingadhoc/odoo-argentina/issues
+
