@@ -8,103 +8,105 @@
         <field name="arch" type="xml">
             <form string="Ajuste por Inflación">
                 <header>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,preview,done"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,preview,done" />
                 </header>
                 <sheet>
                     <div class="oe_title">
                         <h1>Ajuste por Inflación Contable</h1>
                         <h3>Cierre de Ejercicio Fiscal</h3>
                     </div>
-                    
+
                     <!-- Advertencias -->
-                    <div class="alert alert-warning" role="alert" 
-                         attrs="{'invisible': [('warning_message', '=', False)]}">
-                        <field name="warning_message" readonly="1" nolabel="1"/>
+                    <div class="alert alert-warning" role="alert"
+                        attrs="{'invisible': [('warning_message', '=', False)]}">
+                        <field name="warning_message" readonly="1" nolabel="1" />
                     </div>
-                    
+
                     <!-- Configuración Principal (solo en draft) -->
                     <group attrs="{'invisible': [('state', '!=', 'draft')]}">
                         <group string="Período del Ejercicio">
-                            <field name="company_id" options="{'no_create': True}"/>
-                            <field name="currency_id" invisible="1"/>
-                            <field name="date_from"/>
-                            <field name="date_to"/>
+                            <field name="company_id" options="{'no_create': True}" />
+                            <field name="currency_id" invisible="1" />
+                            <field name="date_from" />
+                            <field name="date_to" />
                         </group>
                         <group string="Índices de Inflación">
-                            <field name="start_index_id" readonly="1"/>
-                            <field name="start_index" readonly="1"/>
-                            <field name="end_index_id" readonly="1"/>
-                            <field name="end_index" readonly="1"/>
-                            <field name="adjustment_factor" readonly="1" 
-                                   widget="percentage" 
-                                   options="{'factor': 1}"/>
+                            <field name="start_index_id" readonly="1" />
+                            <field name="start_index" readonly="1" />
+                            <field name="end_index_id" readonly="1" />
+                            <field name="end_index" readonly="1" />
+                            <field name="adjustment_factor" readonly="1"
+                                widget="percentage"
+                                options="{'factor': 1}" />
                         </group>
                     </group>
-                    
+
                     <group attrs="{'invisible': [('state', '!=', 'draft')]}">
                         <group string="Configuración del Asiento">
-                            <field name="journal_id" options="{'no_create': True}"/>
-                            <field name="result_account_id" 
-                                   options="{'no_create': True}"
-                                   placeholder="Cuenta RECPAM"/>
+                            <field name="journal_id" options="{'no_create': True}" />
+                            <field name="result_account_id"
+                                options="{'no_create': True}"
+                                placeholder="Cuenta RECPAM" />
                         </group>
                         <group string="Asientos de Cierre/Apertura">
-                            <field name="has_closure_entries" widget="radio"/>
-                            <field name="closure_move_id" 
-                                   attrs="{'invisible': [('has_closure_entries', '=', 'no')],
+                            <field name="has_closure_entries" widget="radio" />
+                            <field name="closure_move_id"
+                                attrs="{'invisible': [('has_closure_entries', '=', 'no')],
                                            'required': [('has_closure_entries', '=', 'yes')]}"
-                                   options="{'no_create': True}"/>
-                            <field name="opening_move_id" 
-                                   attrs="{'invisible': [('has_closure_entries', '=', 'no')]}"
-                                   options="{'no_create': True}"/>
+                                options="{'no_create': True}" />
+                            <field name="opening_move_id"
+                                attrs="{'invisible': [('has_closure_entries', '=', 'no')]}"
+                                options="{'no_create': True}" />
                         </group>
                     </group>
-                    
+
                     <!-- Vista Previa de Líneas (solo en preview) -->
-                    <group attrs="{'invisible': [('state', '!=', 'preview')]}" string="Vista Previa de Líneas de Ajuste">
+                    <div attrs="{'invisible': [('state', '!=', 'preview')]}">
+                        <separator string="Vista Previa de Líneas de Ajuste" />
                         <field name="preview_line_ids" nolabel="1" readonly="1">
-                            <tree string="Líneas de Ajuste" editable="bottom" create="false" delete="false">
-                                <field name="account_id"/>
-                                <field name="period"/>
-                                <field name="original_balance" sum="Total Original"/>
-                                <field name="factor"/>
-                                <field name="adjustment_amount" sum="Total Ajuste"/>
-                                <field name="is_initial" invisible="1"/>
+                            <tree string="Líneas de Ajuste" editable="bottom" create="false"
+                                delete="false">
+                                <field name="account_id" />
+                                <field name="period" />
+                                <field name="original_balance" sum="Total Original" />
+                                <field name="factor" />
+                                <field name="adjustment_amount" sum="Total Ajuste" />
+                                <field name="is_initial" invisible="1" />
                             </tree>
                         </field>
-                    </group>
-                    
+                    </div>
+
                     <!-- Información adicional -->
-                    <group attrs="{'invisible': [('state', '!=', 'draft')]}">
-                        <div class="alert alert-info" role="alert">
-                            <strong>Información:</strong>
-                            <p>
-                                Este wizard genera el asiento de ajuste por inflación según la normativa argentina 
-                                (RT 6, RT 17, RT 48). El ajuste se aplica a las cuentas marcadas con el tag 
-                                "Non Monetary" (cuentas no monetarias).
-                            </p>
-                            <p>
-                                <strong>Cuentas No Monetarias:</strong> Bienes de uso, inversiones permanentes, 
-                                patrimonio neto, resultados (ingresos y gastos).
-                            </p>
-                            <p>
-                                <strong>Cuenta RECPAM:</strong> El resultado del ajuste se registra en la cuenta 
-                                "Resultado por Exposición a los Cambios en el Poder Adquisitivo de la Moneda".
-                            </p>
-                        </div>
-                    </group>
+                    <div class="alert alert-info" role="alert"
+                        attrs="{'invisible': [('state', '!=', 'draft')]}">
+                        <strong>Información:</strong>
+                        <p>
+                            Este wizard genera el asiento de ajuste por inflación según la normativa
+                            argentina
+                            (RT 6, RT 17, RT 48). El ajuste se aplica a las cuentas marcadas con el
+                            tag
+                            "Non Monetary" (cuentas no monetarias).
+                        </p>
+                        <p>
+                            <strong>Cuentas No Monetarias:</strong> Bienes de uso, inversiones
+                            permanentes, patrimonio neto, resultados (ingresos y gastos). </p>
+                        <p>
+                            <strong>Cuenta RECPAM:</strong> El resultado del ajuste se registra en
+                            la cuenta "Resultado por Exposición a los Cambios en el Poder
+                            Adquisitivo de la Moneda". </p>
+                    </div>
                 </sheet>
-                
+
                 <footer attrs="{'invisible': [('state', '=', 'done')]}">
-                    <button name="action_preview" string="Vista Previa" type="object" 
-                            class="btn-primary"
-                            attrs="{'invisible': [('state', '!=', 'draft')]}"/>
+                    <button name="action_preview" string="Vista Previa" type="object"
+                        class="btn-primary"
+                        attrs="{'invisible': [('state', '!=', 'draft')]}" />
                     <button name="action_back_to_draft" string="Volver" type="object"
-                            attrs="{'invisible': [('state', '!=', 'preview')]}"/>
-                    <button name="action_confirm" string="Generar Asiento" type="object" 
-                            class="btn-primary"
-                            attrs="{'invisible': [('state', '!=', 'preview')]}"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                        attrs="{'invisible': [('state', '!=', 'preview')]}" />
+                    <button name="action_confirm" string="Generar Asiento" type="object"
+                        class="btn-primary"
+                        attrs="{'invisible': [('state', '!=', 'preview')]}" />
+                    <button string="Cancelar" class="btn-secondary" special="cancel" />
                 </footer>
             </form>
         </field>
@@ -115,7 +117,7 @@
         <field name="name">Generar Ajuste por Inflación</field>
         <field name="res_model">inflation.adjustment.wizard</field>
         <field name="view_mode">form</field>
-        <field name="view_id" ref="inflation_adjustment_wizard_view_form"/>
+        <field name="view_id" ref="inflation_adjustment_wizard_view_form" />
         <field name="target">new</field>
     </record>
 
