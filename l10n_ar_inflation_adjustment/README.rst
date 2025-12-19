@@ -2,17 +2,14 @@
 Argentina - Ajuste por Inflación
 ==================================
 
-.. |badge1| image:: https://img.shields.io/badge/maturity-Beta-yellow.png
-    :target: https://odoo-community.org/page/development-status
-    :alt: Beta
-.. |badge2| image:: https://img.shields.io/badge/licence-AGPL--3-blue.png
+.. |badge1| image:: https://img.shields.io/badge/licence-AGPL--3-blue.png
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
-.. |badge3| image:: https://img.shields.io/badge/github-odoo--argentina-lightgray.png?logo=github
-    :target: https://github.com/ingadhoc/odoo-argentina
+.. |badge2| image:: https://img.shields.io/badge/github-odoo--argentina-lightgray.png?logo=github
+    :target: https://github.com/Mueve-TEC/odoo-argentina
     :alt: odoo-argentina
 
-|badge1| |badge2| |badge3|
+|badge1| |badge2|
 
 Módulo para el cálculo y generación del **Ajuste por Inflación Contable** 
 requerido por la normativa argentina al momento del cierre del ejercicio fiscal.
@@ -143,16 +140,16 @@ Autores
 -------
 
 * ADHOC SA
-* [Fundación Mueve](https://mueve.org.ar)
+* `Fundación Mueve <https://mueve.org.ar>`_
 
 Contribuidores
 --------------
 
-* Ezequiel Ludueña
+* `Ezequiel Ludueña <https://github.com/ezeluduena>`_
 
 Mantenedores
 ------------
 
-Este módulo es mantenido por Fundación Mueve.
+Este módulo es mantenido por `Fundación Mueve <https://mueve.org.ar>`_.
 
 
