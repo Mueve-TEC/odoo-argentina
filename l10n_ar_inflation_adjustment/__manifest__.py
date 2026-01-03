@@ -1,12 +1,12 @@
-# License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
+# -*- coding: utf-8 -*-
 {
-    'name': 'Argentina - Ajuste por Inflación',
-    'version': "16.0.1.0.0",
+    'name': "Argentina - Ajuste por Inflación",
+    'summary': """
+        Ajuste por inflación contable para cierre de ejercicio fiscal argentino.""",
+    'author': "Mueve",
+    'website': "https://github.com/Mueve-TEC/odoo-argentina",
     'category': 'Accounting',
-    'sequence': 14,
-    'summary': 'Ajuste por inflación contable para cierre de ejercicio fiscal argentino',
-    'author': 'Mueve',
-    'website': 'https://mueve.org.ar/',
+    'version': "16.0.1.0.0",
     'license': 'AGPL-3',
     'depends': [
         'account',
@@ -23,5 +23,6 @@
         'views/menu_views.xml',
     ],
     'application': False,
+    'installable': True,
     'post_init_hook': 'post_init_hook',
 }

@@ -1,16 +1,13 @@
+# -*- coding: utf-8 -*-
 {
-    'name': 'Fix Module Upgrade',
-    'version': '16.0.1.0.0',
+    'name': "Fix Module Upgrade",
+    'summary': """
+        Corrige el error TypeError al actualizar módulos en Odoo 16.""",
+    'author': "Mueve",
+    'website': "https://www.mueve.org.ar/",
     'category': 'Technical',
-    'summary': 'Fix button_immediate_upgrade TypeError in Odoo 16',
-    'description': """
-        This module fixes the TypeError that occurs when updating modules:
-        "button_immediate_upgrade() takes 1 positional argument but 2 were given"
-        
-        This is a known issue in Odoo 16.0 where the method signature doesn't match
-        the way it's called from the frontend.
-    """,
-    'author': 'Technical Fix',
+    'version': '16.0.1.0.0',
+    'license': "AGPL-3",
     'depends': ['base'],
     'data': [],
     'installable': True,

@@ -1,15 +1,18 @@
-==================================
+===================================
 Argentina - Ajuste por Inflación
-==================================
+===================================
 
-.. |badge1| image:: https://img.shields.io/badge/licence-AGPL--3-blue.png
+.. |badge1| image:: https://img.shields.io/badge/maturity-Production%2FStable-green.png
+    :target: https://odoo-community.org/page/development-status
+    :alt: Production/Stable
+.. |badge2| image:: https://img.shields.io/badge/license-AGPL--3-blue.png
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
-.. |badge2| image:: https://img.shields.io/badge/github-odoo--argentina-lightgray.png?logo=github
+.. |badge3| image:: https://img.shields.io/badge/github-odoo--argentina-lightgray.png?logo=github
     :target: https://github.com/Mueve-TEC/odoo-argentina
-    :alt: odoo-argentina
+    :alt: Mueve
 
-|badge1| |badge2|
+|badge1| |badge2| |badge3|
 
 Módulo para el cálculo y generación del **Ajuste por Inflación Contable** 
 requerido por la normativa argentina al momento del cierre del ejercicio fiscal.
@@ -75,11 +78,18 @@ Funcionamiento
 Instalación
 ===========
 
-1. Copiar el módulo a la carpeta de addons
-2. Actualizar la lista de aplicaciones
-3. Instalar "Argentina - Ajuste por Inflación"
+Para instalar este módulo, debe seguir los siguientes pasos:
 
-Dependencias:
+1. Descargue el módulo y colóquelo en el directorio de addons de Odoo.
+2. Reinicie el servidor de Odoo.
+3. Vaya a **Apps** en el menú de Odoo.
+4. Busque `l10n_ar_inflation_adjustment`.
+5. Haga clic en **Instalar**.
+
+Dependencias
+============
+
+Este módulo depende de los siguientes módulos de Odoo:
 
 * ``account`` (Contabilidad)
 * ``l10n_ar`` (Localización Argentina)
@@ -136,20 +146,22 @@ Generar Ajuste por Inflación
 Créditos
 ========
 
-Autores
--------
+Autor
+-----
+
+Este módulo fue desarrollado por:
 
 * ADHOC SA
-* `Fundación Mueve <https://mueve.org.ar>`_
+* Mueve (https://www.mueve.org.ar/)
 
 Contribuidores
 --------------
 
-* `Ezequiel Ludueña <https://github.com/ezeluduena>`_
+* Ezequiel Ludueña (https://github.com/ezeluduena)
 
 Mantenedores
 ------------
 
-Este módulo es mantenido por `Fundación Mueve <https://mueve.org.ar>`_.
+Este módulo es mantenido por:
 
-
+- Mueve (https://www.mueve.org.ar/)
