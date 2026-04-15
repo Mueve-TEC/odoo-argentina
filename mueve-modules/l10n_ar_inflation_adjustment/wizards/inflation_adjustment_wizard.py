@@ -1,6 +1,6 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl.html).
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError, UserError
+from odoo.exceptions import UserError
 from odoo.tools.misc import formatLang, format_date
 from dateutil.relativedelta import relativedelta
 
@@ -53,14 +53,14 @@ class InflationAdjustmentWizard(models.TransientModel):
     journal_id = fields.Many2one(
         'account.journal',
         string='Diario',
-        domain="[('type', '=', 'general'), ('company_id', '=', company_id)]",
+        domain="[('type', '=', 'general')]", check_company=True,
         required=True,
         help='Diario contable donde se registrará el asiento de ajuste.'
     )
     result_account_id = fields.Many2one(
         'account.account',
         string='Cuenta de Resultado por Ajuste',
-        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
+        domain="[('deprecated', '=', False)]", check_company=True,
         required=True,
         help='Cuenta donde se registrará el resultado neto del ajuste por inflación. '
              'Generalmente es una cuenta de resultados financieros '
@@ -77,6 +77,7 @@ class InflationAdjustmentWizard(models.TransientModel):
     start_index = fields.Float(
         string='Valor Índice Inicial',
         compute='_compute_indices',
+        store=True,
         digits=(12, 4),
     )
     end_index_id = fields.Many2one(
@@ -88,11 +89,13 @@ class InflationAdjustmentWizard(models.TransientModel):
     end_index = fields.Float(
         string='Valor Índice Final',
         compute='_compute_indices',
+        store=True,
         digits=(12, 4),
     )
     adjustment_factor = fields.Float(
         string='Factor de Ajuste Total (%)',
         compute='_compute_indices',
+        store=True,
         digits=(8, 4),
         help='Factor de ajuste total del período = (Índice Final / Índice Inicial - 1) * 100'
     )
@@ -601,9 +604,7 @@ class InflationAdjustmentWizard(models.TransientModel):
             'line_ids': [(0, 0, vals) for vals in move_lines],
         }
         
-        move = self.env['account.move'].with_context(
-            skip_invoice_sync=True
-        ).create(move_vals)
+        move = self.env['account.move'].create(move_vals)
         
         self.state = 'done'
         
