@@ -6,7 +6,7 @@
     'author': "Mueve",
     'website': "https://github.com/Mueve-TEC/odoo-argentina",
     'category': 'Accounting',
-    'version': "16.0.1.0.0",
+    'version': "18.0.1.0.0",
     'license': 'AGPL-3',
     'depends': [
         'account',
