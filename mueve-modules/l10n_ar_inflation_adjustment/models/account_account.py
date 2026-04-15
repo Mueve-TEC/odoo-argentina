@@ -92,7 +92,7 @@ class AccountAccount(models.Model):
         # Buscar cuentas que deberían tener el tag pero no lo tienen
         accounts = self.search([
             ('account_type', 'in', self.NON_MONETARY_ACCOUNT_TYPES),
-            ('company_id', 'in', company.ids if hasattr(company, 'ids') else [company.id]),
+            ('company_ids', 'in', company.ids if hasattr(company, 'ids') else [company.id]),
             ('tag_ids', 'not in', [non_monetary_tag.id]),
         ])
         
@@ -111,7 +111,7 @@ class AccountAccount(models.Model):
         """
         domain = [('inflation_adjustable', '=', True)]
         if company_id:
-            domain.append(('company_id', '=', company_id))
+            domain.append(('company_ids', '=', company_id))
         return self.search(domain)
 
     @api.model
