@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
 
     <!-- Vista Form para el Wizard de Ajuste por Inflación -->
@@ -17,13 +17,12 @@
                     </div>
 
                     <!-- Advertencias -->
-                    <div class="alert alert-warning" role="alert"
-                        attrs="{'invisible': [('warning_message', '=', False)]}">
+                    <div class="alert alert-warning" role="alert" invisible="not warning_message">
                         <field name="warning_message" readonly="1" nolabel="1" />
                     </div>
 
                     <!-- Configuración Principal (solo en draft) -->
-                    <group attrs="{'invisible': [('state', '!=', 'draft')]}">
+                    <group invisible="state != 'draft'">
                         <group string="Período del Ejercicio">
                             <field name="company_id" options="{'no_create': True}" />
                             <field name="currency_id" invisible="1" />
@@ -35,36 +34,32 @@
                             <field name="start_index" readonly="1" />
                             <field name="end_index_id" readonly="1" />
                             <field name="end_index" readonly="1" />
-                            <field name="adjustment_factor" readonly="1"
-                                widget="percentage"
+                            <field name="adjustment_factor" readonly="1" widget="percentage"
                                 options="{'factor': 1}" />
                         </group>
                     </group>
 
-                    <group attrs="{'invisible': [('state', '!=', 'draft')]}">
+                    <group invisible="state != 'draft'">
                         <group string="Configuración del Asiento">
                             <field name="journal_id" options="{'no_create': True}" />
-                            <field name="result_account_id"
-                                options="{'no_create': True}"
+                            <field name="result_account_id" options="{'no_create': True}"
                                 placeholder="Cuenta RECPAM" />
                         </group>
                         <group string="Asientos de Cierre/Apertura">
                             <field name="has_closure_entries" widget="radio" />
-                            <field name="closure_move_id"
-                                attrs="{'invisible': [('has_closure_entries', '=', 'no')],
-                                           'required': [('has_closure_entries', '=', 'yes')]}"
+                            <field name="closure_move_id" invisible="has_closure_entries == 'no'"
+                                required="has_closure_entries == 'yes'"
                                 options="{'no_create': True}" />
-                            <field name="opening_move_id"
-                                attrs="{'invisible': [('has_closure_entries', '=', 'no')]}"
+                            <field name="opening_move_id" invisible="has_closure_entries == 'no'"
                                 options="{'no_create': True}" />
                         </group>
                     </group>
 
                     <!-- Vista Previa de Líneas (solo en preview) -->
-                    <div attrs="{'invisible': [('state', '!=', 'preview')]}">
+                    <div invisible="state != 'preview'">
                         <separator string="Vista Previa de Líneas de Ajuste" />
                         <field name="preview_line_ids" nolabel="1" readonly="1">
-                            <tree string="Líneas de Ajuste" editable="bottom" create="false"
+                            <list string="Líneas de Ajuste" editable="bottom" create="false"
                                 delete="false">
                                 <field name="account_id" />
                                 <field name="period" />
@@ -72,13 +67,12 @@
                                 <field name="factor" />
                                 <field name="adjustment_amount" sum="Total Ajuste" />
                                 <field name="is_initial" invisible="1" />
-                            </tree>
+                            </list>
                         </field>
                     </div>
 
                     <!-- Información adicional -->
-                    <div class="alert alert-info" role="alert"
-                        attrs="{'invisible': [('state', '!=', 'draft')]}">
+                    <div class="alert alert-info" role="alert" invisible="state != 'draft'">
                         <strong>Información:</strong>
                         <p>
                             Este wizard genera el asiento de ajuste por inflación según la normativa
@@ -97,15 +91,13 @@
                     </div>
                 </sheet>
 
-                <footer attrs="{'invisible': [('state', '=', 'done')]}">
+                <footer invisible="state == 'done'">
                     <button name="action_preview" string="Vista Previa" type="object"
-                        class="btn-primary"
-                        attrs="{'invisible': [('state', '!=', 'draft')]}" />
+                        class="btn-primary" invisible="state != 'draft'" />
                     <button name="action_back_to_draft" string="Volver" type="object"
-                        attrs="{'invisible': [('state', '!=', 'preview')]}" />
+                        invisible="state != 'preview'" />
                     <button name="action_confirm" string="Generar Asiento" type="object"
-                        class="btn-primary"
-                        attrs="{'invisible': [('state', '!=', 'preview')]}" />
+                        class="btn-primary" invisible="state != 'preview'" />
                     <button string="Cancelar" class="btn-secondary" special="cancel" />
                 </footer>
             </form>
