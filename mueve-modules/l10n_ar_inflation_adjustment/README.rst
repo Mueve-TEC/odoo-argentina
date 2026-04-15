@@ -19,7 +19,7 @@ requerido por la normativa argentina al momento del cierre del ejercicio fiscal.
 
 **Características principales:**
 
-* Compatible con Odoo Community Edition 16.0
+* Compatible con Odoo Community Edition 18.0
 * Utiliza los índices IPC publicados por INDEC
 * Implementa las normas RT 6, RT 17 y RT 48 de FACPCE
 * Genera automáticamente el asiento de ajuste por inflación
