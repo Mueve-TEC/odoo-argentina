@@ -17,7 +17,7 @@
     <!-- Menú para el Wizard en Contabilidad > Acciones -->
     <menuitem id="menu_inflation_adjustment_wizard"
         name="Generar Ajuste por Inflación"
-        parent="account.menu_finance_entries_actions"
+        parent="account.menu_finance_entries"
         action="action_inflation_adjustment_wizard"
         sequence="100" />
 
