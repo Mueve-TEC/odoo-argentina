@@ -63,7 +63,7 @@ Funcionamiento
 ==============
 
 1. **Índices IPC**: El módulo incluye los índices de precios al consumidor 
-   publicados por INDEC desde 2013 hasta la fecha actual.
+   publicados por INDEC desde 2013 hasta marzo de 2026.
 
 2. **Cálculo del Ajuste**: Para cada cuenta no monetaria, se calcula:
    
@@ -136,7 +136,7 @@ Configuración
 Generar Ajuste por Inflación
 ----------------------------
 
-1. Ir a Contabilidad > Acciones > Generar Ajuste por Inflación
+1. Ir a Contabilidad > Generar Ajuste por Inflación
 2. Seleccionar el período del ejercicio fiscal
 3. Seleccionar el diario y la cuenta RECPAM
 4. Indicar si hay asientos de cierre/apertura a excluir
