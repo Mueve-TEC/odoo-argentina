@@ -49,7 +49,7 @@ Rubros Monetarios vs No Monetarios
 * **Rubros No Monetarios**: No representan moneda ni están determinados en moneda
   (bienes de uso, inventarios, patrimonio neto, resultados). Se ajustan.
 
-El módulo identifica las cuentas no monetarias mediante el tag "Non Monetary"
+El módulo identifica las cuentas no monetarias mediante el tag "No monetario"
 (``l10n_ar_ux.no_monetaria_tag``).
 
 RECPAM
@@ -67,8 +67,8 @@ Funcionamiento
 
 2. **Cálculo del Ajuste**: Para cada cuenta no monetaria, se calcula:
    
-   * Saldo Inicial × (Índice Cierre / Índice Apertura - 1)
-   * Movimientos del Período × (Índice Cierre / Índice del Mes - 1)
+   * Saldo Inicial (Índice Cierre / Índice Apertura - 1)
+   * Movimientos del Período (Índice Cierre / Índice del Mes - 1)
 
 3. **Generación del Asiento**: Se crea un asiento de ajuste con:
    
@@ -97,7 +97,7 @@ Este módulo depende de los siguientes módulos de Odoo:
 **Nota:** Este módulo es completamente independiente y no requiere módulos 
 Enterprise ni otros módulos de la localización argentina como ``l10n_ar_ux``.
 Si ``l10n_ar_ux`` está instalado, el módulo es compatible y puede usar su tag 
-"Non Monetary" existente.
+"No monetario" existente.
 
 Uso
 ===
@@ -117,10 +117,6 @@ Configuración
    
    * Seleccionar las cuentas en la vista de lista
    * Usar la acción "Asignar Tag No Monetaria a Cuentas"
-   
-   Para asignar automáticamente a todas las cuentas de la compañía:
-   
-   * Ejecutar la acción "Asignar Tag No Monetaria a Todas las Cuentas"
 
 2. **Verificar Índices IPC**:
    
