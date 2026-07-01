@@ -59,6 +59,8 @@ class AfipwsConnection(models.Model):
     afip_ws = fields.Selection([
         ('ws_sr_padron_a4', 'Servicio de Consulta de Padrón Alcance 4'),
         ('ws_sr_padron_a5', 'Servicio de Consulta de Padrón Alcance 5'),
+        ('ws_sr_constancia_inscripcion',
+         'Constancia de Inscripción (SR-Padrón)'),
         ('ws_sr_padron_a10', 'Servicio de Consulta de Padrón Alcance 10'),
         ('ws_sr_padron_a100', 'Servicio de Consulta de Padrón Alcance 100'),
     ],
@@ -112,6 +114,16 @@ class AfipwsConnection(models.Model):
                 afip_ws_url = (
                     "https://awshomo.afip.gov.ar/sr-padron/webservices/"
                     "personaServiceA5?wsdl")
+        elif afip_ws == 'ws_sr_constancia_inscripcion':
+            # Servicio renombrado por ARCA, reutiliza el mismo WSDL que A5.
+            if environment_type == 'production':
+                afip_ws_url = (
+                    "https://aws.afip.gov.ar/sr-padron/webservices/"
+                    "personaServiceA5?wsdl")
+            else:
+                afip_ws_url = (
+                    "https://awshomo.afip.gov.ar/sr-padron/webservices/"
+                    "personaServiceA5?wsdl")
         return afip_ws_url
 
     def check_afip_ws(self, afip_ws):
@@ -137,7 +149,8 @@ class AfipwsConnection(models.Model):
         # https://groups.google.com/d/msg/pyafipws/Xr08e4ZuMmQ/6iDzXwdJAwAJ
         # TODO mejorar ya que probablemente no ande en test pero el tema es
         # que en esta parte no tenemos data del env_type
-        if self.afip_ws in ['ws_sr_padron_a4', 'ws_sr_padron_a5']:
+        if self.afip_ws in ['ws_sr_padron_a4', 'ws_sr_padron_a5',
+                        'ws_sr_constancia_inscripcion']:
             ws.HOMO = False
 
         if not ws:
@@ -178,6 +191,10 @@ class AfipwsConnection(models.Model):
             from pyafipws.ws_sr_padron import WSSrPadronA4
             ws = WSSrPadronA4()
         elif afip_ws == 'ws_sr_padron_a5':
+            from pyafipws.ws_sr_padron import WSSrPadronA5
+            ws = WSSrPadronA5()
+        elif afip_ws == 'ws_sr_constancia_inscripcion':
+            # Servicio renombrado por ARCA, reutiliza la interfaz A5.
             from pyafipws.ws_sr_padron import WSSrPadronA5
             ws = WSSrPadronA5()
         return ws
