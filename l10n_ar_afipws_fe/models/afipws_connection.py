@@ -32,6 +32,8 @@ class AfipwsConnection(models.Model):
         ('wscdc', 'Constatación de Comprobantes (WSCDC)'),
         ('ws_sr_padron_a4', 'Servicio de Consulta de Padrón Alcance 4'),
         ('ws_sr_padron_a5', 'Servicio de Consulta de Padrón Alcance 5'),
+        ('ws_sr_constancia_inscripcion',
+         'Constancia de Inscripción (SR-Padrón)'),
         ('ws_sr_padron_a10', 'Servicio de Consulta de Padrón Alcance 10'),
         ('ws_sr_padron_a100', 'Servicio de Consulta de Padrón Alcance 100'),
     ],
