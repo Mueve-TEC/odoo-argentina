@@ -4,12 +4,15 @@
 # directory
 ##############################################################################
 from odoo import models, _, fields, api, tools
-from odoo.exceptions import UserError,ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools.safe_eval import safe_eval
 import datetime
+import logging
 from datetime import date
 
 from pyafipws.ws_sr_padron import WSSrPadronA5
+
+_logger = logging.getLogger(__name__)
 
 
 class ResPartner(models.Model):
@@ -105,8 +108,10 @@ class ResPartner(models.Model):
                     'Not confirmed certificate found on database'))
             company = certificate.alias_id.company_id
 
-        # consultamos a5 ya que extiende a4 y tiene validez de constancia
-        padron = company.get_connection('ws_sr_padron_a5').connect()
+        # consultamos constancia de inscripcion (servicio renombrado por
+        # ARCA, antes ws_sr_padron_a5). Reutiliza la misma interfaz A5.
+        padron = company.get_connection(
+            'ws_sr_constancia_inscripcion').connect()
         error_msg = _(
             'No pudimos actualizar desde padron afip al partner %s (%s).\n'
             'Recomendamos verificar manualmente en la página de AFIP.\n'
@@ -117,8 +122,11 @@ class ResPartner(models.Model):
             raise UserError(error_msg % (self.name, cuit, e))
 
         if not padron.denominacion or padron.denominacion == ', ':
-            raise UserError(error_msg % (
-                self.name, cuit, 'La afip no devolvió nombre'))
+            # ARCA devuelve errorConstancia (sin datosGenerales) cuando el
+            # contribuyente tiene pendiente domicilio fiscal electrónico
+            # (RG 4280/18) u otro motivo. Mostramos el error real de AFIP.
+            afip_err = padron.Excepcion or _('La afip no devolvió nombre')
+            raise UserError(error_msg % (self.name, cuit, afip_err))
         vals = self.parce_census_vals(padron)
         del vals['imp_iva_padron']
         del vals['last_update_census']
