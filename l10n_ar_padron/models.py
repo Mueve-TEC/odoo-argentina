@@ -128,8 +128,8 @@ class ResPartner(models.Model):
             afip_err = padron.Excepcion or _('La afip no devolvió nombre')
             raise UserError(error_msg % (self.name, cuit, afip_err))
         vals = self.parce_census_vals(padron)
-        del vals['imp_iva_padron']
-        del vals['last_update_census']
-        del vals['imp_ganancias_padron']
+        vals.pop('imp_iva_padron', None)
+        vals.pop('last_update_census', None)
+        vals.pop('imp_ganancias_padron', None)
         self.write(vals)
         return vals
