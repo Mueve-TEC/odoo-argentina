@@ -4,7 +4,12 @@ Localización Argentina para Odoo Community Edition 19. Esta versión está basa
 [Ingeniería ADHOC](https://github.com/ingadhoc) y cuenta con los módulos, en el directorio `adhoc-modules`, de los siguientes repositorios:
 
 - [odoo-argentina](https://github.com/ingadhoc/odoo-argentina/tree/19.0)
-- [odoo-argentina-ce](https://github.com/ingadhoc/odoo-argentina-ce/tree/19.0)
+- [odoo-argentina-ce](https://github.com/adhoc-dev/odoo-argentina-ce/tree/19.0-mig-MAQ)
+  (rama de migración a 19.0 de [adhoc-dev](https://github.com/adhoc-dev), PR
+  abierto [#92](https://github.com/ingadhoc/odoo-argentina-ce/pull/92) a
+  ingadhoc; incluye el renombrado `l10n_ar_afipws` → `l10n_ar_fiscal_ws` y
+  `l10n_ar_afipws_fe` → `l10n_ar_fiscal_ws_fe`. `l10n_ar_pos_afipws_fe` y
+  `l10n_ar_reports` aún no están migrados en esta rama.)
 - [account-payment](https://github.com/ingadhoc/account-payment/tree/19.0)
 - [account-financial-tools](https://github.com/ingadhoc/account-financial-tools/tree/19.0)
 
@@ -25,13 +30,17 @@ pip install -r requirements.txt
 ## Actualizar módulos de upstream (`adhoc-modules/`)
 
 Los directorios bajo `adhoc-modules/` son **git subtrees** de repositorios
-upstream de Ingeniería ADHOC. Para traer la última versión de la rama `19.0`
-de cualquiera de ellos:
+upstream de Ingeniería ADHOC. Para traer la última versión de cada uno:
 
 ```bash
 ./scripts/pull-upstream.sh <nombre>
 # <nombre> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools }
 ```
+
+La rama a sincronizar está configurada por repositorio en
+`scripts/pull-upstream.sh`: actualmente todos siguen `19.0` salvo
+`odoo-argentina-ce`, que sigue la rama de migración `19.0-mig-MAQ` de
+`adhoc-dev` (ver arriba).
 
 Esto ejecuta `git subtree pull --squash`, produciendo un par
 "Squashed … + Merge commit …" idéntico al de la importación inicial.
