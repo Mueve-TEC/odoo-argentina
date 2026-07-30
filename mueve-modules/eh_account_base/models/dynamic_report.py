@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -27,12 +26,12 @@ import json
 import logging
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, UserError, ValidationError
-
 from odoo.addons.eh_account_base.tools.payload_codec import (
-    compress_payload, decompress_payload,
+    compress_payload,
+    decompress_payload,
 )
 from odoo.addons.eh_account_base.tools.xlsx_writer import XlsxReportWriter
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -61,18 +60,22 @@ class EhAccountDynamicReport(models.Model):
     def _check_handler_model(self):
         for rec in self:
             if not rec.handler_model:
-                raise ValidationError(_(
-                    "Handler model is required for report %(code)r.",
-                    code=rec.code,
-                ))
+                raise ValidationError(
+                    _(
+                        "Handler model is required for report %(code)r.",
+                        code=rec.code,
+                    )
+                )
             if rec.handler_model not in self.env.registry.models:
-                raise ValidationError(_(
-                    "Unknown handler model %(model)r for report %(code)r. "
-                    "Did you forget to install the addon that provides "
-                    "the handler?",
-                    model=rec.handler_model,
-                    code=rec.code,
-                ))
+                raise ValidationError(
+                    _(
+                        "Unknown handler model %(model)r for report %(code)r. "
+                        "Did you forget to install the addon that provides "
+                        "the handler?",
+                        model=rec.handler_model,
+                        code=rec.code,
+                    )
+                )
 
     @api.model
     def get_by_code(self, code):
@@ -101,10 +104,7 @@ class EhAccountDynamicReport(models.Model):
         target = self.env['res.currency'].browse(int(target_id)).exists()
         if not target:
             return payload
-        company = (
-            self.env['res.company'].browse(company_ids[0])
-            if company_ids else self.env.company
-        )
+        company = self.env['res.company'].browse(company_ids[0]) if company_ids else self.env.company
         source = company.currency_id
         if not source or target == source:
             return payload
@@ -119,21 +119,20 @@ class EhAccountDynamicReport(models.Model):
             return round(source._convert(value, target, company, date_to), 2)
 
         monetary = {
-            col.get('expression_label')
-            for col in payload.get('columns', [])
-            if col.get('figure_type') == 'monetary'
+            col.get('expression_label') for col in payload.get('columns', []) if col.get('figure_type') == 'monetary'
         }
         for line in payload.get('lines', []):
             for col in line.get('columns', []):
-                if col.get('expression_label') in monetary and isinstance(
-                        col.get('value'), (int, float)):
+                if col.get('expression_label') in monetary and isinstance(col.get('value'), (int, float)):
                     col['value'] = convert(col['value'])
         totals = payload.get('totals', {})
         for key, value in list(totals.items()):
             if isinstance(value, (int, float)) and not key.endswith('_pct'):
                 totals[key] = convert(value)
         payload['currency'] = {
-            'id': target.id, 'name': target.name, 'symbol': target.symbol,
+            'id': target.id,
+            'name': target.name,
+            'symbol': target.symbol,
             'position': target.position,
             'decimal_places': target.decimal_places,
         }
@@ -227,12 +226,13 @@ class EhAccountDynamicReport(models.Model):
                 requested.append(cid)
         forbidden = [c for c in requested if c not in allowed]
         if forbidden:
-            raise AccessError(_(
-                "Report %(code)s was requested for companies you are not "
-                "allowed to access (%(ids)s).",
-                code=self.code,
-                ids=', '.join(str(c) for c in forbidden),
-            ))
+            raise AccessError(
+                _(
+                    "Report %(code)s was requested for companies you are not " "allowed to access (%(ids)s).",
+                    code=self.code,
+                    ids=', '.join(str(c) for c in forbidden),
+                )
+            )
         return requested or [self.env.company.id]
 
     def render(self, options, result_format='json', use_cache=True):
@@ -250,22 +250,22 @@ class EhAccountDynamicReport(models.Model):
         self.ensure_one()
         Execution = self.env['eh.account.report.execution']
 
-        company_ids = (
-            options.get('company_ids')
-            or list(self.env.context.get(
-                'allowed_company_ids', [self.env.company.id],
-            ))
+        company_ids = options.get('company_ids') or list(
+            self.env.context.get(
+                'allowed_company_ids',
+                [self.env.company.id],
+            )
         )
         company_ids = self._eh_clamp_company_ids(company_ids)
 
         canonical = Execution._canonicalise_options(options)
-        options_hash = Execution._hash_string(
-            json.dumps(canonical, sort_keys=True, default=str)
-        )
+        options_hash = Execution._hash_string(json.dumps(canonical, sort_keys=True, default=str))
 
         if use_cache:
             cached = Execution.find_cached(
-                self.code, options_hash, company_ids,
+                self.code,
+                options_hash,
+                company_ids,
             )
             if cached and cached.result_payload:
                 payload = decompress_payload(cached.result_payload)
@@ -293,7 +293,9 @@ class EhAccountDynamicReport(models.Model):
                     ).write({'served_from_execution_id': cached.id})
                     _logger.info(
                         "Report %s cache HIT served_by=%s source=%s",
-                        self.code, audit.id, cached.id,
+                        self.code,
+                        audit.id,
+                        cached.id,
                     )
                     payload['execution_id'] = audit.id
                     payload['from_cache'] = True
@@ -364,33 +366,35 @@ class EhAccountDynamicReport(models.Model):
         """
         self.ensure_one()
         from collections import defaultdict
+
         # Opt-out: a user can hide notes for a clean print/screenshot without
         # losing them. Absent / truthy keeps the historical behaviour.
-        if 'show_annotations' in (options or {}) and not (options or {}).get(
-                'show_annotations', True):
+        if 'show_annotations' in (options or {}) and not (options or {}).get('show_annotations', True):
             return payload
-        annotations = self.env['eh.account.report.annotation'].search([
-            ('report_code', '=', self.code),
-            ('company_id', 'in', list(company_ids)),
-        ])
+        annotations = self.env['eh.account.report.annotation'].search(
+            [
+                ('report_code', '=', self.code),
+                ('company_id', 'in', list(company_ids)),
+            ]
+        )
         if not annotations:
             return payload
         # Manager-gated delete: the user group has create+write but NOT
         # unlink on eh.account.report.annotation (append-only audit posture),
         # so only managers see the delete affordance. Resolved once, not
         # per-note.
-        can_delete = self.env.user.has_group(
-            'eh_account_base.group_eh_manager')
+        can_delete = self.env.user.has_group('eh_account_base.group_eh_manager')
         by_key = defaultdict(list)
         for ann in annotations:
-            by_key[(ann.line_id, ann.expression_label or False)].append({
-                'id': ann.id,
-                'text': ann.text,
-                'author': ann.create_uid.name,
-                'date': (ann.create_date.isoformat()
-                         if ann.create_date else False),
-                'can_delete': can_delete,
-            })
+            by_key[(ann.line_id, ann.expression_label or False)].append(
+                {
+                    'id': ann.id,
+                    'text': ann.text,
+                    'author': ann.create_uid.name,
+                    'date': (ann.create_date.isoformat() if ann.create_date else False),
+                    'can_delete': can_delete,
+                }
+            )
         for line in payload.get('lines', []):
             line_id = line.get('id')
             if not line_id:
@@ -399,8 +403,7 @@ class EhAccountDynamicReport(models.Model):
             if row_notes:
                 line.setdefault('meta', {})['annotations'] = row_notes
             for col in line.get('columns', []):
-                cell_notes = by_key.get(
-                    (line_id, col.get('expression_label')))
+                cell_notes = by_key.get((line_id, col.get('expression_label')))
                 if cell_notes:
                     col['annotations'] = cell_notes
         return payload
@@ -408,13 +411,15 @@ class EhAccountDynamicReport(models.Model):
     def add_annotation(self, line_id, text, expression_label=False):
         """Create an annotation on this report for the given line/cell."""
         self.ensure_one()
-        return self.env['eh.account.report.annotation'].create({
-            'report_code': self.code,
-            'line_id': line_id,
-            'expression_label': expression_label or False,
-            'text': text,
-            'company_id': self.env.company.id,
-        })
+        return self.env['eh.account.report.annotation'].create(
+            {
+                'report_code': self.code,
+                'line_id': line_id,
+                'expression_label': expression_label or False,
+                'text': text,
+                'company_id': self.env.company.id,
+            }
+        )
 
     def delete_annotation(self, annotation_id):
         """Remove a single annotation from this report.
@@ -430,14 +435,12 @@ class EhAccountDynamicReport(models.Model):
         """
         self.ensure_one()
         try:
-            ann = self.env['eh.account.report.annotation'].browse(
-                int(annotation_id)).exists()
+            ann = self.env['eh.account.report.annotation'].browse(int(annotation_id)).exists()
         except (TypeError, ValueError):
             return False
         if not ann or ann.report_code != self.code:
             return False
-        allowed_companies = list(self.env.context.get(
-            'allowed_company_ids', self.env.company.ids))
+        allowed_companies = list(self.env.context.get('allowed_company_ids', self.env.company.ids))
         if ann.company_id.id not in allowed_companies:
             return False
         # unlink() enforces the manager-only ACL; we deliberately do not
@@ -473,6 +476,7 @@ class EhAccountDynamicReport(models.Model):
         attachment plus an act_url action is the conventional Odoo path.
         """
         import base64
+
         self.ensure_one()
         content = self.render_xlsx(options)
         date_block = options.get('date') or {}
@@ -481,17 +485,16 @@ class EhAccountDynamicReport(models.Model):
             date_block.get('date_from') or '',
             date_block.get('date_to') or '',
         )
-        attachment = self.env['ir.attachment'].create({
-            'name': filename,
-            'type': 'binary',
-            'datas': base64.b64encode(content),
-            'mimetype': (
-                'application/vnd.openxmlformats-officedocument'
-                '.spreadsheetml.sheet'
-            ),
-            'res_model': self._name,
-            'res_id': self.id,
-        })
+        attachment = self.env['ir.attachment'].create(
+            {
+                'name': filename,
+                'type': 'binary',
+                'datas': base64.b64encode(content),
+                'mimetype': ('application/vnd.openxmlformats-officedocument' '.spreadsheetml.sheet'),
+                'res_model': self._name,
+                'res_id': self.id,
+            }
+        )
         return {
             'type': 'ir.actions.act_url',
             'url': '/web/content/%s?download=true' % attachment.id,
@@ -514,8 +517,10 @@ class EhAccountDynamicReport(models.Model):
         """
         self.ensure_one()
         empty = {
-            'child_lines': [], 'has_more': False,
-            'next_offset': int(offset or 0), 'total_count': 0,
+            'child_lines': [],
+            'has_more': False,
+            'next_offset': int(offset or 0),
+            'total_count': 0,
         }
         try:
             # SECURITY: clamp the requested company scope BEFORE delegating.
@@ -526,23 +531,25 @@ class EhAccountDynamicReport(models.Model):
             # (collapsed) page, matching the "expand never crashes" contract.
             options = dict(options or {})
             options['company_ids'] = self._eh_clamp_company_ids(
-                options.get('company_ids')
-                or list(self.env.context.get(
-                    'allowed_company_ids', [self.env.company.id])))
+                options.get('company_ids') or list(self.env.context.get('allowed_company_ids', [self.env.company.id]))
+            )
             handler = self.env[self.handler_model].with_context(
                 eh_report_code=self.code,
             )
             result = handler.expand_account_line(
-                options, line_id, offset=offset, limit=limit,
+                options,
+                line_id,
+                offset=offset,
+                limit=limit,
             )
             if not isinstance(result, dict):
                 return empty
             child_lines = result.get('child_lines') or []
-            company_ids = (
-                options.get('company_ids')
-                or list(self.env.context.get(
-                    'allowed_company_ids', [self.env.company.id],
-                ))
+            company_ids = options.get('company_ids') or list(
+                self.env.context.get(
+                    'allowed_company_ids',
+                    [self.env.company.id],
+                )
             )
             # Restate child monetary cells into the presentation currency
             # and attach annotations, reusing the same helpers the main
@@ -556,15 +563,14 @@ class EhAccountDynamicReport(models.Model):
                 # the handler's _build_columns when available.
                 if hasattr(handler, '_build_columns'):
                     columns = handler._build_columns() or []
-                sub_payload = {'columns': columns, 'lines': child_lines,
-                               'totals': {}}
-                self._eh_apply_presentation_currency(
-                    sub_payload, options, company_ids)
+                sub_payload = {'columns': columns, 'lines': child_lines, 'totals': {}}
+                self._eh_apply_presentation_currency(sub_payload, options, company_ids)
                 self._eh_apply_annotations(sub_payload, company_ids, options)
             except Exception:  # pragma: no cover - presentation is best-effort
                 _logger.exception(
                     "expand_line presentation/annotation failed for %s %s",
-                    self.code, line_id,
+                    self.code,
+                    line_id,
                 )
             return {
                 'child_lines': child_lines,
@@ -575,7 +581,8 @@ class EhAccountDynamicReport(models.Model):
         except Exception:
             _logger.exception(
                 "expand_line failed for report %s line %s; row stays collapsed",
-                self.code, line_id,
+                self.code,
+                line_id,
             )
             return empty
 

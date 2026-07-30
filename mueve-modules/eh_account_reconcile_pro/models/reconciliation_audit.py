@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -104,12 +103,11 @@ class EhReconciliationAudit(models.Model):
     def _compute_display_name(self):
         for rec in self:
             sl_label = rec.statement_line_id.payment_ref or 'statement line'
-            ts = (
-                fields.Datetime.to_string(rec.decided_at)
-                if rec.decided_at else ''
-            )
+            ts = fields.Datetime.to_string(rec.decided_at) if rec.decided_at else ''
             rec.display_name = "%s: %s (%s)" % (
-                rec.decision or 'pending', sl_label, ts,
+                rec.decision or 'pending',
+                sl_label,
+                ts,
             )
 
     # ----------- audit-log immutability -----------
@@ -122,12 +120,8 @@ class EhReconciliationAudit(models.Model):
     # so it was a bypass, not a control. The ACL sets perm_write=0/perm_unlink=0
     # on top of these guards as defence in depth.
     def write(self, vals):
-        raise UserError(_(
-            "Reconciliation audit rows are append-only and cannot be "
-            "edited once recorded."))
+        raise UserError(_("Reconciliation audit rows are append-only and cannot be " "edited once recorded."))
 
     @api.ondelete(at_uninstall=False)
     def _unlink_immutable_audit(self):
-        raise UserError(_(
-            "Reconciliation audit rows cannot be deleted; they are an "
-            "immutable decision trail."))
+        raise UserError(_("Reconciliation audit rows cannot be deleted; they are an " "immutable decision trail."))

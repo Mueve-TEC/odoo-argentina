@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -99,9 +98,7 @@ class ResCompany(models.Model):
 
     # SEPA Direct Debit
     eh_sepa_dd_default_instrument = fields.Selection(
-        [('CORE', "CORE (consumer)"),
-         ('B2B', "B2B (business-to-business)"),
-         ('COR1', "COR1 (one-day legacy)")],
+        [('CORE', "CORE (consumer)"), ('B2B', "B2B (business-to-business)"), ('COR1', "COR1 (one-day legacy)")],
         string="Default SEPA DD Local Instrument",
         default='CORE',
     )
@@ -225,44 +222,28 @@ class ResCompany(models.Model):
     # they can be specifically identified with financing or investing
     # activities, which this report does not attempt automatically.
     eh_cf_interest_paid_section = fields.Selection(
-        [('operating', "Operating activities"),
-         ('financing', "Financing activities")],
+        [('operating', "Operating activities"), ('financing', "Financing activities")],
         string="Interest Paid Presentation",
         default='operating',
-        help=(
-            "Cash Flow Statement section carrying the Interest Paid "
-            "disclosure line (IAS 7.31/7.33)."
-        ),
+        help=("Cash Flow Statement section carrying the Interest Paid " "disclosure line (IAS 7.31/7.33)."),
     )
     eh_cf_interest_received_section = fields.Selection(
-        [('operating', "Operating activities"),
-         ('investing', "Investing activities")],
+        [('operating', "Operating activities"), ('investing', "Investing activities")],
         string="Interest Received Presentation",
         default='operating',
-        help=(
-            "Cash Flow Statement section carrying the Interest Received "
-            "disclosure line (IAS 7.31/7.33)."
-        ),
+        help=("Cash Flow Statement section carrying the Interest Received " "disclosure line (IAS 7.31/7.33)."),
     )
     eh_cf_dividends_paid_section = fields.Selection(
-        [('financing', "Financing activities"),
-         ('operating', "Operating activities")],
+        [('financing', "Financing activities"), ('operating', "Operating activities")],
         string="Dividends Paid Presentation",
         default='financing',
-        help=(
-            "Cash Flow Statement section carrying the Dividends Paid "
-            "disclosure line (IAS 7.31/7.34)."
-        ),
+        help=("Cash Flow Statement section carrying the Dividends Paid " "disclosure line (IAS 7.31/7.34)."),
     )
     eh_cf_dividends_received_section = fields.Selection(
-        [('operating', "Operating activities"),
-         ('investing', "Investing activities")],
+        [('operating', "Operating activities"), ('investing', "Investing activities")],
         string="Dividends Received Presentation",
         default='operating',
-        help=(
-            "Cash Flow Statement section carrying the Dividends Received "
-            "disclosure line (IAS 7.31/7.33)."
-        ),
+        help=("Cash Flow Statement section carrying the Dividends Received " "disclosure line (IAS 7.31/7.33)."),
     )
     # Cash Flow Statement: income-taxes-paid fallback measurement (IAS 7.35).
     #
@@ -293,13 +274,19 @@ class ResCompany(models.Model):
     # equivalent set), yet none of them move a journal entry, so without a
     # bump here the reporting cache would serve figures/labels computed under
     # the old configuration until an unrelated move posts.
-    _EH_REPORT_CONFIG_FIELDS = frozenset({
-        'eh_pnl_finance_cost_account_ids', 'eh_pnl_tax_expense_account_ids',
-        'eh_pnl_deferred_tax_account_ids', 'eh_cash_equivalent_account_ids',
-        'eh_cf_interest_paid_section', 'eh_cf_interest_received_section',
-        'eh_cf_dividends_paid_section', 'eh_cf_dividends_received_section',
-        'eh_cf_tax_fallback',
-    })
+    _EH_REPORT_CONFIG_FIELDS = frozenset(
+        {
+            'eh_pnl_finance_cost_account_ids',
+            'eh_pnl_tax_expense_account_ids',
+            'eh_pnl_deferred_tax_account_ids',
+            'eh_cash_equivalent_account_ids',
+            'eh_cf_interest_paid_section',
+            'eh_cf_interest_received_section',
+            'eh_cf_dividends_paid_section',
+            'eh_cf_dividends_received_section',
+            'eh_cf_tax_fallback',
+        }
+    )
 
     def write(self, vals):
         res = super().write(vals)
@@ -320,11 +307,12 @@ class ResCompany(models.Model):
         ids = tuple(int(c) for c in company_ids)
         if not ids:
             return
-        self.env.cr.execute(SQL(
-            "UPDATE res_company SET eh_move_version = eh_move_version + 1 "
-            "WHERE id IN %s",
-            ids,
-        ))
+        self.env.cr.execute(
+            SQL(
+                "UPDATE res_company SET eh_move_version = eh_move_version + 1 " "WHERE id IN %s",
+                ids,
+            )
+        )
         self.env['res.company'].browse(ids).invalidate_recordset(
             ['eh_move_version'],
         )

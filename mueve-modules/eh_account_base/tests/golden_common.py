@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -49,9 +48,11 @@ class EhGoldenTestCase(EhAccountIntegrationTestCase):
             code = account if isinstance(account, str) else account.code
             hit = None
             for line in remaining:
-                if (line.account_id.code == code
-                        and abs(line.debit - debit) < 0.005
-                        and abs(line.credit - credit) < 0.005):
+                if (
+                    line.account_id.code == code
+                    and abs(line.debit - debit) < 0.005
+                    and abs(line.credit - credit) < 0.005
+                ):
                     hit = line
                     break
             if hit is None:
@@ -62,25 +63,25 @@ class EhGoldenTestCase(EhAccountIntegrationTestCase):
         if misses:
             detail.append('missing lines: %s' % misses)
         if remaining:
-            detail.append('unexpected lines: %s' % [
-                (l.account_id.code, l.debit, l.credit) for l in remaining])
+            detail.append('unexpected lines: %s' % [(l.account_id.code, l.debit, l.credit) for l in remaining])
         if detail:
-            got = [(l.account_id.code, l.debit, l.credit)
-                   for l in move.line_ids]
-            self.fail('%s\nmove %s lines %s\n%s' % (
-                msg or 'journal entry mismatch', move.display_name, got,
-                '; '.join(detail)))
+            got = [(l.account_id.code, l.debit, l.credit) for l in move.line_ids]
+            self.fail(
+                '%s\nmove %s lines %s\n%s'
+                % (msg or 'journal entry mismatch', move.display_name, got, '; '.join(detail))
+            )
 
     def assertBalanced(self, move):
         self.assertAlmostEqual(
             sum(move.line_ids.mapped('debit')),
-            sum(move.line_ids.mapped('credit')), places=2,
-            msg='unbalanced entry %s' % move.display_name)
+            sum(move.line_ids.mapped('credit')),
+            places=2,
+            msg='unbalanced entry %s' % move.display_name,
+        )
 
     def posted_balance(self, account, company=None):
         """Posted debit-minus-credit balance of an account."""
-        domain = [('account_id', '=', account.id),
-                  ('parent_state', '=', 'posted')]
+        domain = [('account_id', '=', account.id), ('parent_state', '=', 'posted')]
         if company is not None:
             domain.append(('company_id', '=', company.id))
         lines = self.env['account.move.line'].search(domain)
@@ -92,12 +93,14 @@ class EhGoldenTestCase(EhAccountIntegrationTestCase):
     @classmethod
     def _set_rate(cls, currency, day, rate, company=None):
         """Pin an exchange rate (units of currency per 1 company currency)."""
-        cls.env['res.currency.rate'].create({
-            'currency_id': currency.id,
-            'name': day,
-            'rate': rate,
-            'company_id': (company or cls.company).id,
-        })
+        cls.env['res.currency.rate'].create(
+            {
+                'currency_id': currency.id,
+                'name': day,
+                'rate': rate,
+                'company_id': (company or cls.company).id,
+            }
+        )
         if not currency.active:
             currency.sudo().active = True
 

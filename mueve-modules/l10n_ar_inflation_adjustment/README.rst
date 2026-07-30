@@ -14,7 +14,7 @@ Argentina - Ajuste por Inflación
 
 |badge1| |badge2| |badge3|
 
-Módulo para el cálculo y generación del **Ajuste por Inflación Contable** 
+Módulo para el cálculo y generación del **Ajuste por Inflación Contable**
 requerido por la normativa argentina al momento del cierre del ejercicio fiscal.
 
 **Características principales:**
@@ -33,8 +33,8 @@ El ajuste por inflación contable en Argentina está regulado por:
 * **RT 17** (FACPCE): Normas Contables Profesionales
 * **RT 48** (FACPCE): Modificaciones a la RT 17 sobre inflación
 
-Según estas normas, cuando existe un contexto de alta inflación (variación 
-acumulada del IPC superior al 100% en 3 años), los estados contables deben 
+Según estas normas, cuando existe un contexto de alta inflación (variación
+acumulada del IPC superior al 100% en 3 años), los estados contables deben
 expresarse en moneda homogénea de cierre.
 
 Conceptos Clave
@@ -45,7 +45,7 @@ Rubros Monetarios vs No Monetarios
 
 * **Rubros Monetarios**: Representan moneda de curso legal o derechos/obligaciones
   en moneda (caja, bancos, créditos, deudas). No se ajustan.
-  
+
 * **Rubros No Monetarios**: No representan moneda ni están determinados en moneda
   (bienes de uso, inventarios, patrimonio neto, resultados). Se ajustan.
 
@@ -56,22 +56,22 @@ RECPAM
 ------
 
 El **Resultado por Exposición a los Cambios en el Poder Adquisitivo de la Moneda**
-(RECPAM) es la contrapartida del ajuste por inflación. Representa la ganancia o 
+(RECPAM) es la contrapartida del ajuste por inflación. Representa la ganancia o
 pérdida por mantener activos/pasivos monetarios durante períodos inflacionarios.
 
 Funcionamiento
 ==============
 
-1. **Índices IPC**: El módulo incluye los índices de precios al consumidor 
+1. **Índices IPC**: El módulo incluye los índices de precios al consumidor
    publicados por INDEC desde 2013 hasta marzo de 2026.
 
 2. **Cálculo del Ajuste**: Para cada cuenta no monetaria, se calcula:
-   
+
    * Saldo Inicial (Índice Cierre / Índice Apertura - 1)
    * Movimientos del Período (Índice Cierre / Índice del Mes - 1)
 
 3. **Generación del Asiento**: Se crea un asiento de ajuste con:
-   
+
    * Una línea por cada cuenta ajustada
    * Contrapartida en la cuenta RECPAM
 
@@ -94,9 +94,9 @@ Este módulo depende de los siguientes módulos de Odoo:
 * ``account`` (Contabilidad)
 * ``l10n_ar`` (Localización Argentina)
 
-**Nota:** Este módulo es completamente independiente y no requiere módulos 
+**Nota:** Este módulo es completamente independiente y no requiere módulos
 Enterprise ni otros módulos de la localización argentina como ``l10n_ar_ux``.
-Si ``l10n_ar_ux`` está instalado, el módulo es compatible y puede usar su tag 
+Si ``l10n_ar_ux`` está instalado, el módulo es compatible y puede usar su tag
 "No monetario" existente.
 
 Uso
@@ -106,26 +106,26 @@ Configuración
 -------------
 
 1. **Verificar Cuentas No Monetarias**:
-   
+
    Ir a Contabilidad > Configuración > Plan Contable
-   
-   Al instalar el módulo, automáticamente se asigna el tag "No Monetaria" 
-   a las cuentas que corresponden según su tipo (activos fijos, patrimonio, 
+
+   Al instalar el módulo, automáticamente se asigna el tag "No Monetaria"
+   a las cuentas que corresponden según su tipo (activos fijos, patrimonio,
    resultados, etc.).
-   
+
    Para asignar manualmente el tag a cuentas adicionales:
-   
+
    * Seleccionar las cuentas en la vista de lista
    * Usar la acción "Asignar Tag No Monetaria a Cuentas"
 
 2. **Verificar Índices IPC**:
-   
+
    Ir a Contabilidad > Configuración > Ajuste por Inflación > Índices IPC
-   
+
    El módulo incluye índices históricos. Agregar índices faltantes si es necesario.
 
 3. **Crear o Identificar Cuenta RECPAM**:
-   
+
    Esta es la cuenta donde se registrará el resultado por inflación.
    Usualmente es una cuenta de resultados financieros. En nuestra implementación es la cuenta **"5.6.1.01.070 R.E.C.P.A.M."**.
 

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -14,17 +13,17 @@ payload compression ratio sanity, and refusal of unknown codec versions.
 
 import json
 
+from odoo.addons.eh_account_base.tools.payload_codec import (
+    compress_payload,
+    decompress_payload,
+)
 from odoo.tests import tagged
 
-from odoo.addons.eh_account_base.tools.payload_codec import (
-    compress_payload, decompress_payload,
-)
 from .common import EhAccountUnitTestCase
 
 
 @tagged('eh_account_base', 'unit')
 class TestPayloadCodec(EhAccountUnitTestCase):
-
     def test_round_trip_simple_dict(self):
         original = {'a': 1, 'b': 'hello', 'c': [1, 2, 3]}
         decoded = decompress_payload(compress_payload(original))
@@ -49,8 +48,7 @@ class TestPayloadCodec(EhAccountUnitTestCase):
 
     def test_version_byte_present(self):
         blob = compress_payload({'a': 1})
-        self.assertEqual(blob[0], 0x01,
-                         "first byte should be the codec version")
+        self.assertEqual(blob[0], 0x01, "first byte should be the codec version")
 
     def test_unknown_version_raises(self):
         bad_blob = bytes([0xFF]) + b'somecompressedjunk'
@@ -63,7 +61,8 @@ class TestPayloadCodec(EhAccountUnitTestCase):
         raw_size = len(json.dumps(original).encode('utf-8'))
         compressed_size = len(compress_payload(original))
         self.assertLess(
-            compressed_size, raw_size // 4,
+            compressed_size,
+            raw_size // 4,
             f"compression ratio worse than 4x: {raw_size} -> {compressed_size}",
         )
 
@@ -71,6 +70,7 @@ class TestPayloadCodec(EhAccountUnitTestCase):
         # Datetime objects are not JSON serialisable by default; default=str
         # is used by the codec to fall back on stringification.
         from datetime import datetime
+
         original = {'when': datetime(2026, 4, 30, 12, 0, 0)}
         blob = compress_payload(original)
         decoded = decompress_payload(blob)

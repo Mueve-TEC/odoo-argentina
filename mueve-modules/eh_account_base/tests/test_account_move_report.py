@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -37,30 +36,31 @@ class TestAccountMoveReportRender(EhAccountIntegrationTestCase):
         # A minimal, balanced, POSTED entry: one debit line and one credit
         # line, with a partner on the receivable leg so the template's
         # partner-facing branches are exercised.
-        cls.move = cls.post_balanced_move([
-            {
-                'account': cls.account_receivable,
-                'debit': 150.0,
-                'partner': cls.partner_a,
-                'name': 'Journal entry render test line',
-            },
-            {
-                'account': cls.account_revenue,
-                'credit': 150.0,
-                'name': 'Journal entry render test counter-leg',
-            },
-        ])
+        cls.move = cls.post_balanced_move(
+            [
+                {
+                    'account': cls.account_receivable,
+                    'debit': 150.0,
+                    'partner': cls.partner_a,
+                    'name': 'Journal entry render test line',
+                },
+                {
+                    'account': cls.account_revenue,
+                    'credit': 150.0,
+                    'name': 'Journal entry render test counter-leg',
+                },
+            ]
+        )
 
     def test_journal_entry_report_renders(self):
         """The report renders to non-empty HTML for a posted move."""
         self.assertEqual(
-            self.move.state, 'posted',
+            self.move.state,
+            'posted',
             'Fixture move must be posted before rendering the report.',
         )
-        report = self.env.ref(
-            'eh_account_base.action_report_eh_account_move')
-        html, ftype = report._render_qweb_html(
-            report.report_name, self.move.ids)
+        report = self.env.ref('eh_account_base.action_report_eh_account_move')
+        html, ftype = report._render_qweb_html(report.report_name, self.move.ids)
         self.assertEqual(ftype, 'html')
         # Non-empty HTML proves the template compiled and rendered without a
         # KeyError / attribute error / missing-field failure.

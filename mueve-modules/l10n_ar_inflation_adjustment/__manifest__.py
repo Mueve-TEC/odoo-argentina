@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 {
     'name': "Argentina - Ajuste por Inflación",
     'summary': """

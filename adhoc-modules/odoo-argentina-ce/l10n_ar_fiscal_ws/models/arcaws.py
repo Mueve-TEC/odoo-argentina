@@ -4,10 +4,9 @@
 ##############################################################################
 import logging
 
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 from odoo.tools import float_repr, ormcache, safe_eval
-
-from odoo import _, api, fields, models
 
 from .exceptions import ArcaError
 

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -66,24 +65,28 @@ class EhAccountReportWizard(models.TransientModel):
     company_ids = fields.Many2many(
         'res.company',
         'eh_account_report_wizard_company_rel',
-        'wizard_id', 'company_id',
+        'wizard_id',
+        'company_id',
         required=True,
         default=lambda self: self.env.company,
     )
     journal_ids = fields.Many2many(
         'account.journal',
         'eh_account_report_wizard_journal_rel',
-        'wizard_id', 'journal_id',
+        'wizard_id',
+        'journal_id',
     )
     partner_ids = fields.Many2many(
         'res.partner',
         'eh_account_report_wizard_partner_rel',
-        'wizard_id', 'partner_id',
+        'wizard_id',
+        'partner_id',
     )
     account_ids = fields.Many2many(
         'account.account',
         'eh_account_report_wizard_account_rel',
-        'wizard_id', 'account_id',
+        'wizard_id',
+        'account_id',
     )
 
     hierarchical_groups = fields.Boolean(
@@ -131,9 +134,11 @@ class EhAccountReportWizard(models.TransientModel):
     def _check_dates(self):
         for rec in self:
             if rec.date_from and rec.date_to and rec.date_from > rec.date_to:
-                raise ValidationError(_(
-                    "Date From cannot be later than Date To.",
-                ))
+                raise ValidationError(
+                    _(
+                        "Date From cannot be later than Date To.",
+                    )
+                )
 
     @api.onchange('period_preset')
     def _onchange_period_preset(self):
@@ -172,6 +177,7 @@ class EhAccountReportWizard(models.TransientModel):
             return date(year, 1, 1), today
         if preset == 'last_month':
             from datetime import timedelta
+
             first_of_this_month = today.replace(day=1)
             last_month_end = first_of_this_month - timedelta(days=1)
             last_month_start = last_month_end.replace(day=1)
@@ -179,13 +185,14 @@ class EhAccountReportWizard(models.TransientModel):
         if preset == 'last_quarter':
             quarter_start_month = 3 * ((month - 1) // 3) + 1
             from datetime import timedelta
+
             this_quarter_start = date(year, quarter_start_month, 1)
             last_quarter_end = this_quarter_start - timedelta(days=1)
-            last_quarter_start_month = (
-                3 * ((last_quarter_end.month - 1) // 3) + 1
-            )
+            last_quarter_start_month = 3 * ((last_quarter_end.month - 1) // 3) + 1
             last_quarter_start = date(
-                last_quarter_end.year, last_quarter_start_month, 1,
+                last_quarter_end.year,
+                last_quarter_start_month,
+                1,
             )
             return last_quarter_start, last_quarter_end
         if preset == 'last_year':
@@ -220,17 +227,16 @@ class EhAccountReportWizard(models.TransientModel):
             self.date_from.isoformat(),
             self.date_to.isoformat(),
         )
-        attachment = self.env['ir.attachment'].create({
-            'name': filename,
-            'type': 'binary',
-            'datas': base64.b64encode(content),
-            'mimetype': (
-                'application/vnd.openxmlformats-officedocument'
-                '.spreadsheetml.sheet'
-            ),
-            'res_model': self._name,
-            'res_id': self.id,
-        })
+        attachment = self.env['ir.attachment'].create(
+            {
+                'name': filename,
+                'type': 'binary',
+                'datas': base64.b64encode(content),
+                'mimetype': ('application/vnd.openxmlformats-officedocument' '.spreadsheetml.sheet'),
+                'res_model': self._name,
+                'res_id': self.id,
+            }
+        )
         return {
             'type': 'ir.actions.act_url',
             'url': '/web/content/%s?download=true' % attachment.id,

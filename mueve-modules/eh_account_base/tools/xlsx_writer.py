@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -53,7 +52,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-
 # Number formats for openpyxl. The accounting convention is to render
 # negatives in red and positive numbers without a sign.
 _FORMAT_MONETARY = '#,##0.00;[Red](#,##0.00)'
@@ -83,7 +81,9 @@ class XlsxReportWriter:
     META_FONT = Font(name='Arial', size=9, italic=True, color='666666')
     TOTAL_FONT = Font(name='Arial', size=10, bold=True)
     HEADER_FILL = PatternFill(
-        start_color='F0F0F0', end_color='F0F0F0', fill_type='solid',
+        start_color='F0F0F0',
+        end_color='F0F0F0',
+        fill_type='solid',
     )
     TOP_BORDER = Border(top=Side(border_style='thin', color='000000'))
 
@@ -98,7 +98,10 @@ class XlsxReportWriter:
         self._currency = None
 
     BRAND_FONT = Font(
-        name='Arial', size=8, italic=True, color='6C757D',
+        name='Arial',
+        size=8,
+        italic=True,
+        color='6C757D',
     )
     BRAND_FOOTER_TEXT = "Made with 🤍 from Melbourne by ERP Heritage"
 
@@ -113,7 +116,7 @@ class XlsxReportWriter:
 
         columns = payload.get('columns') or []
         self._write_column_headers(columns)
-        for line in (payload.get('lines') or []):
+        for line in payload.get('lines') or []:
             self._write_line(line, columns)
         if payload.get('totals'):
             self._write_totals(payload['totals'], columns)
@@ -129,7 +132,9 @@ class XlsxReportWriter:
         """
         self._row += 1
         cell = self.ws.cell(
-            row=self._row, column=1, value=self.BRAND_FOOTER_TEXT,
+            row=self._row,
+            column=1,
+            value=self.BRAND_FOOTER_TEXT,
         )
         cell.font = self.BRAND_FONT
         cell.alignment = Alignment(horizontal='left')
@@ -151,8 +156,7 @@ class XlsxReportWriter:
             details.append("Period: %s to %s" % (date_from or '', date_to or ''))
         if 'posted_only' in meta:
             details.append(
-                "Posted entries only" if meta['posted_only']
-                else "All entries (including draft)",
+                "Posted entries only" if meta['posted_only'] else "All entries (including draft)",
             )
         if 'show_zero' in meta and meta['show_zero']:
             details.append("Including zero balance accounts")
@@ -162,19 +166,23 @@ class XlsxReportWriter:
             elif self._currency.get('name'):
                 sym = self._currency.get('symbol') or ''
                 details.append(
-                    "Currency: %s%s" % (
+                    "Currency: %s%s"
+                    % (
                         self._currency['name'],
                         " (%s)" % sym if sym else "",
                     ),
                 )
         if details:
             ws.cell(
-                row=self._row, column=1, value=" | ".join(details),
+                row=self._row,
+                column=1,
+                value=" | ".join(details),
             ).font = self.META_FONT
             self._row += 1
         if generated_at:
             ws.cell(
-                row=self._row, column=1,
+                row=self._row,
+                column=1,
                 value="Generated: %s" % generated_at,
             ).font = self.META_FONT
             self._row += 1
@@ -188,7 +196,9 @@ class XlsxReportWriter:
         ws = self.ws
         for i, col_def in enumerate(columns, start=1):
             cell = ws.cell(
-                row=self._row, column=i, value=col_def.get('name', ''),
+                row=self._row,
+                column=i,
+                value=col_def.get('name', ''),
             )
             cell.font = self.HEADER_FONT
             cell.fill = self.HEADER_FILL
@@ -216,12 +226,11 @@ class XlsxReportWriter:
         ws = self.ws
         # Column 1: line name. Indent if this is a sub line.
         name_cell = ws.cell(
-            row=self._row, column=1,
+            row=self._row,
+            column=1,
             value=self._safe_cell_text(line.get('name', '')),
         )
-        name_cell.font = (
-            self.TOTAL_FONT if line.get('level', 1) == 0 else self.DEFAULT_FONT
-        )
+        name_cell.font = self.TOTAL_FONT if line.get('level', 1) == 0 else self.DEFAULT_FONT
         level = max(int(line.get('level', 1)) - 1, 0)
         if level:
             name_cell.alignment = Alignment(indent=level)
@@ -276,14 +285,8 @@ class XlsxReportWriter:
         if not symbol_lit:
             return f'#,##{digits};[Red](#,##{digits})'
         if self._currency.get('position') == 'before':
-            return (
-                f'"{symbol_lit}" #,##{digits};'
-                f'[Red]"{symbol_lit}" (#,##{digits})'
-            )
-        return (
-            f'#,##{digits} "{symbol_lit}";'
-            f'[Red](#,##{digits}) "{symbol_lit}"'
-        )
+            return f'"{symbol_lit}" #,##{digits};' f'[Red]"{symbol_lit}" (#,##{digits})'
+        return f'#,##{digits} "{symbol_lit}";' f'[Red](#,##{digits}) "{symbol_lit}"'
 
     def _apply_figure_type(self, cell, figure_type):
         if figure_type == 'monetary':

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -35,11 +34,15 @@ class EhAccountReportFoldState(models.Model):
     _order = 'user_id, report_code, line_id'
 
     user_id = fields.Many2one(
-        'res.users', required=True, ondelete='cascade', index=True,
+        'res.users',
+        required=True,
+        ondelete='cascade',
+        index=True,
         default=lambda self: self.env.user,
     )
     report_code = fields.Char(
-        required=True, index=True,
+        required=True,
+        index=True,
         help=(
             "Report code that emitted the line, e.g. 'balance_sheet' "
             "or 'profit_and_loss'. Matches the code on "
@@ -47,7 +50,8 @@ class EhAccountReportFoldState(models.Model):
         ),
     )
     line_id = fields.Char(
-        required=True, index=True,
+        required=True,
+        index=True,
         help=(
             "Unique identifier the handler emitted for the line, e.g. "
             "'section-assets-group-12_47'. Stable across reloads "
@@ -105,21 +109,26 @@ class EhAccountReportFoldState(models.Model):
         Idempotent: re-calling with the same values is a no-op write.
         """
         user = user or self.env.user
-        existing = self.sudo().search([
-            ('user_id', '=', user.id),
-            ('report_code', '=', report_code),
-            ('line_id', '=', line_id),
-        ], limit=1)
+        existing = self.sudo().search(
+            [
+                ('user_id', '=', user.id),
+                ('report_code', '=', report_code),
+                ('line_id', '=', line_id),
+            ],
+            limit=1,
+        )
         if existing:
             if existing.is_unfolded != bool(is_unfolded):
                 existing.is_unfolded = bool(is_unfolded)
             return existing
-        return self.sudo().create({
-            'user_id': user.id,
-            'report_code': report_code,
-            'line_id': line_id,
-            'is_unfolded': bool(is_unfolded),
-        })
+        return self.sudo().create(
+            {
+                'user_id': user.id,
+                'report_code': report_code,
+                'line_id': line_id,
+                'is_unfolded': bool(is_unfolded),
+            }
+        )
 
     @api.model
     def reset_for_user(self, report_code, user=None):
@@ -128,7 +137,9 @@ class EhAccountReportFoldState(models.Model):
         Used by the "Reset folding" action on the report viewer.
         """
         user = user or self.env.user
-        self.sudo().search([
-            ('user_id', '=', user.id),
-            ('report_code', '=', report_code),
-        ]).unlink()
+        self.sudo().search(
+            [
+                ('user_id', '=', user.id),
+                ('report_code', '=', report_code),
+            ]
+        ).unlink()

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -63,21 +62,16 @@ class CurrencyTable:
     time a multicurrency consumer asks for the join or rate expression.
     """
 
-    def __init__(self, env, company_ids, presentation_currency_id=None,
-                 as_of_date=None, rate_map=None):
+    def __init__(self, env, company_ids, presentation_currency_id=None, as_of_date=None, rate_map=None):
         self.env = env
-        self.company_ids = tuple(
-            int(c) for c in (company_ids or ()) if c is not None
-        )
+        self.company_ids = tuple(int(c) for c in (company_ids or ()) if c is not None)
         # Presentation currency: explicit option wins, else the active
         # company's currency. Resolved to an int id so the seeding step and
         # the monocurrency decision never browse a falsey record.
         if presentation_currency_id:
             self.presentation_currency_id = int(presentation_currency_id)
         else:
-            self.presentation_currency_id = (
-                env.company.currency_id.id if env is not None else False
-            )
+            self.presentation_currency_id = env.company.currency_id.id if env is not None else False
         self.as_of_date = as_of_date
         # fallback_flags records any company whose rate had to be defaulted,
         # so the report meta can disclose it instead of silently using 1.0.
@@ -114,8 +108,7 @@ class CurrencyTable:
         if not self.presentation_currency_id:
             return True
         try:
-            companies = self.env['res.company'].sudo().browse(
-                list(self.company_ids))
+            companies = self.env['res.company'].sudo().browse(list(self.company_ids))
             currency_ids = set(companies.mapped('currency_id').ids)
         except Exception:  # pragma: no cover - defensive
             return True
@@ -141,22 +134,22 @@ class CurrencyTable:
         rate_map = {}
         Currency = self.env['res.currency'].sudo()
         presentation = Currency.browse(self.presentation_currency_id)
-        companies = self.env['res.company'].sudo().browse(
-            list(self.company_ids))
+        companies = self.env['res.company'].sudo().browse(list(self.company_ids))
         for company in companies:
             company_currency = company.currency_id
             if not company_currency or not presentation:
                 rate_map[company.id] = 1.0
-                self.fallback_flags.append({
-                    'company_id': company.id,
-                    'reason': 'missing_currency',
-                })
+                self.fallback_flags.append(
+                    {
+                        'company_id': company.id,
+                        'reason': 'missing_currency',
+                    }
+                )
                 continue
             if company_currency.id == self.presentation_currency_id:
                 rate_map[company.id] = 1.0
                 continue
-            rate = self._resolve_company_rate(
-                company_currency, presentation, company)
+            rate = self._resolve_company_rate(company_currency, presentation, company)
             rate_map[company.id] = rate
         self._rate_map = rate_map
         self._seeded = True
@@ -170,7 +163,10 @@ class CurrencyTable:
         """
         try:
             rate = self.env['res.currency']._get_conversion_rate(
-                company_currency, presentation, company, self.as_of_date,
+                company_currency,
+                presentation,
+                company,
+                self.as_of_date,
             )
             if rate and float(rate) > 0.0:
                 return float(rate)
@@ -179,21 +175,28 @@ class CurrencyTable:
         # Fallback 1: latest available rate, date-agnostic.
         try:
             rate = self.env['res.currency']._get_conversion_rate(
-                company_currency, presentation, company, None,
+                company_currency,
+                presentation,
+                company,
+                None,
             )
             if rate and float(rate) > 0.0:
-                self.fallback_flags.append({
-                    'company_id': company.id,
-                    'reason': 'no_rate_on_date_used_latest',
-                })
+                self.fallback_flags.append(
+                    {
+                        'company_id': company.id,
+                        'reason': 'no_rate_on_date_used_latest',
+                    }
+                )
                 return float(rate)
         except Exception:  # pragma: no cover - defensive
             pass
         # Fallback 2: identity. Better a same-currency-style sum than a crash.
-        self.fallback_flags.append({
-            'company_id': company.id,
-            'reason': 'no_rate_found_used_identity',
-        })
+        self.fallback_flags.append(
+            {
+                'company_id': company.id,
+                'reason': 'no_rate_found_used_identity',
+            }
+        )
         return 1.0
 
     @property
@@ -230,13 +233,11 @@ class CurrencyTable:
         values_clause = SQL(", ").join(value_rows)
         # aml_alias is a fixed internal identifier ('aml'); guard anyway and
         # bind it as a quoted identifier so it can never carry an injection.
-        alias = aml_alias if (
-            isinstance(aml_alias, str) and aml_alias.isidentifier()
-        ) else 'aml'
+        alias = aml_alias if (isinstance(aml_alias, str) and aml_alias.isidentifier()) else 'aml'
         return SQL(
-            "LEFT JOIN (VALUES %s) AS ct (company_id, rate) "
-            "ON ct.company_id = %s.company_id",
-            values_clause, SQL.identifier(alias),
+            "LEFT JOIN (VALUES %s) AS ct (company_id, rate) " "ON ct.company_id = %s.company_id",
+            values_clause,
+            SQL.identifier(alias),
         )
 
     def rate_expr(self):

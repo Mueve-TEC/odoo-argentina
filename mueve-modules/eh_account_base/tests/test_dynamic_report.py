@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -33,7 +32,6 @@ from odoo.tests import tagged
 
 from .common import EhAccountUnitTestCase
 
-
 # Handler we patch. Real, installed (provided by eh_account_dynamic_reports
 # which is a guaranteed dependency in the suite test run).
 _REAL_HANDLER = 'eh.account.dynamic.report.handler.aged_payable'
@@ -43,8 +41,7 @@ def _fake_compute_payload():
     """The standard payload returned by the patched compute() method."""
     return {
         'columns': [
-            {'expression_label': 'value', 'name': "Value",
-             'figure_type': 'monetary'},
+            {'expression_label': 'value', 'name': "Value", 'figure_type': 'monetary'},
         ],
         'lines': [
             {
@@ -89,22 +86,22 @@ class _CallLog:
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         if _REAL_HANDLER not in cls.env.registry.models:
             raise unittest.SkipTest(
-                f"{_REAL_HANDLER} not registered; install "
-                f"eh_account_dynamic_reports for these tests."
+                f"{_REAL_HANDLER} not registered; install " f"eh_account_dynamic_reports for these tests."
             )
         # Use a real installed handler. The compute() call will be patched
         # in each test method, so the actual aged_payable logic does not run.
-        cls.report = cls.env['eh.account.dynamic.report'].create({
-            'code': 'orch_cache_test',
-            'name': 'Orchestrator Cache Test',
-            'handler_model': _REAL_HANDLER,
-        })
+        cls.report = cls.env['eh.account.dynamic.report'].create(
+            {
+                'code': 'orch_cache_test',
+                'name': 'Orchestrator Cache Test',
+                'handler_model': _REAL_HANDLER,
+            }
+        )
 
     def setUp(self):
         super().setUp()
@@ -139,7 +136,8 @@ class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
             result = self.report.render(self.options)
         self.assertTrue(result['from_cache'])
         self.assertEqual(
-            len(_CallLog.calls), 0,
+            len(_CallLog.calls),
+            0,
             "Handler should not run on cache hit",
         )
         self.assertEqual(len(result['lines']), 1)
@@ -156,9 +154,7 @@ class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
         with self._patch_compute():
             self.report.render(self.options)
             _CallLog.reset()
-            self.env['res.company']._eh_bump_move_version(
-                [self.env.company.id]
-            )
+            self.env['res.company']._eh_bump_move_version([self.env.company.id])
             result = self.report.render(self.options)
         self.assertFalse(result['from_cache'])
         self.assertEqual(len(_CallLog.calls), 1)
@@ -171,7 +167,8 @@ class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
             result_b = self.report.render(options_b)
         self.assertFalse(result_b['from_cache'])
         self.assertNotEqual(
-            result_a['execution_id'], result_b['execution_id'],
+            result_a['execution_id'],
+            result_b['execution_id'],
         )
 
     def test_canonicalisation_makes_key_order_insensitive(self):
@@ -181,8 +178,7 @@ class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
             reordered = {
                 'show_zero': False,
                 'company_ids': [self.env.company.id],
-                'date': {'date_to': '2026-12-31',
-                         'date_from': '2026-01-01'},
+                'date': {'date_to': '2026-12-31', 'date_from': '2026-01-01'},
                 'posted_only': True,
             }
             result = self.report.render(reordered)
@@ -192,20 +188,20 @@ class TestOrchestratorCacheBehaviour(EhAccountUnitTestCase):
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestOrchestratorErrorPath(EhAccountUnitTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         if _REAL_HANDLER not in cls.env.registry.models:
             raise unittest.SkipTest(
-                f"{_REAL_HANDLER} not registered; install "
-                f"eh_account_dynamic_reports for these tests."
+                f"{_REAL_HANDLER} not registered; install " f"eh_account_dynamic_reports for these tests."
             )
-        cls.report = cls.env['eh.account.dynamic.report'].create({
-            'code': 'orch_error_test',
-            'name': 'Orchestrator Error Test',
-            'handler_model': _REAL_HANDLER,
-        })
+        cls.report = cls.env['eh.account.dynamic.report'].create(
+            {
+                'code': 'orch_error_test',
+                'name': 'Orchestrator Error Test',
+                'handler_model': _REAL_HANDLER,
+            }
+        )
 
     def test_handler_exception_marks_execution_error(self):
         # Manually catch the exception rather than using assertRaises,
@@ -220,11 +216,12 @@ class TestOrchestratorErrorPath(EhAccountUnitTestCase):
             _CallLog.failing_compute,
         ):
             try:
-                self.report.render({
-                    'date': {'date_from': '2026-01-01',
-                             'date_to': '2026-12-31'},
-                    'company_ids': [self.env.company.id],
-                })
+                self.report.render(
+                    {
+                        'date': {'date_from': '2026-01-01', 'date_to': '2026-12-31'},
+                        'company_ids': [self.env.company.id],
+                    }
+                )
             except RuntimeError as exc:
                 raised = True
                 self.assertIn('synthetic failure', str(exc))
@@ -233,7 +230,8 @@ class TestOrchestratorErrorPath(EhAccountUnitTestCase):
         Execution.invalidate_model()
         last = Execution.search(
             [('report_code', '=', 'orch_error_test')],
-            limit=1, order='executed_at desc',
+            limit=1,
+            order='executed_at desc',
         )
         self.assertTrue(last)
         self.assertEqual(last.state, 'error')
@@ -242,51 +240,53 @@ class TestOrchestratorErrorPath(EhAccountUnitTestCase):
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestOrchestratorConstraints(EhAccountUnitTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls._handler_available = (
-            _REAL_HANDLER in cls.env.registry.models
-        )
+        cls._handler_available = _REAL_HANDLER in cls.env.registry.models
 
     def _require_handler(self):
         if not self._handler_available:
-            self.skipTest(
-                f"{_REAL_HANDLER} not registered; install "
-                f"eh_account_dynamic_reports for these tests."
-            )
+            self.skipTest(f"{_REAL_HANDLER} not registered; install " f"eh_account_dynamic_reports for these tests.")
 
     def test_unknown_handler_model_rejected(self):
         with self.assertRaises(UserError):
-            self.env['eh.account.dynamic.report'].create({
-                'code': 'bad_test',
-                'name': 'Bad',
-                'handler_model': 'eh.does.not.exist',
-            })
+            self.env['eh.account.dynamic.report'].create(
+                {
+                    'code': 'bad_test',
+                    'name': 'Bad',
+                    'handler_model': 'eh.does.not.exist',
+                }
+            )
 
     def test_duplicate_code_rejected(self):
         self._require_handler()
-        first = self.env['eh.account.dynamic.report'].create({
-            'code': 'unique_test',
-            'name': 'First',
-            'handler_model': _REAL_HANDLER,
-        })
-        with self.assertRaises(Exception):
-            self.env['eh.account.dynamic.report'].create({
+        first = self.env['eh.account.dynamic.report'].create(
+            {
                 'code': 'unique_test',
-                'name': 'Second',
+                'name': 'First',
                 'handler_model': _REAL_HANDLER,
-            })
+            }
+        )
+        with self.assertRaises(Exception):
+            self.env['eh.account.dynamic.report'].create(
+                {
+                    'code': 'unique_test',
+                    'name': 'Second',
+                    'handler_model': _REAL_HANDLER,
+                }
+            )
         self.assertTrue(first.exists())
 
     def test_get_default_options_returns_dict(self):
         self._require_handler()
-        report = self.env['eh.account.dynamic.report'].create({
-            'code': 'defaults_test',
-            'name': 'Defaults',
-            'handler_model': _REAL_HANDLER,
-        })
+        report = self.env['eh.account.dynamic.report'].create(
+            {
+                'code': 'defaults_test',
+                'name': 'Defaults',
+                'handler_model': _REAL_HANDLER,
+            }
+        )
         opts = report.get_default_options()
         self.assertIn('date', opts)
         self.assertIn('company_ids', opts)

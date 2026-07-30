@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -63,12 +62,12 @@ class EhReconciliationExceptionWizard(models.TransientModel):
     def action_print(self):
         self.ensure_one()
         if self.date_from > self.date_to:
-            raise UserError(_(
-                "Date from must be earlier than or equal to date to.",
-            ))
-        return self.env.ref(
-            'eh_account_reconcile_pro.action_report_reconciliation_exception'
-        ).report_action(self)
+            raise UserError(
+                _(
+                    "Date from must be earlier than or equal to date to.",
+                )
+            )
+        return self.env.ref('eh_account_reconcile_pro.action_report_reconciliation_exception').report_action(self)
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -82,9 +81,7 @@ class EhReconciliationExceptionWizard(models.TransientModel):
             'doc_ids': docids,
             'doc_model': self._name,
             'docs': wizards,
-            'data': {
-                wiz.id: wiz.compute_exception_data() for wiz in wizards
-            },
+            'data': {wiz.id: wiz.compute_exception_data() for wiz in wizards},
         }
 
     def compute_exception_data(self):
@@ -123,36 +120,42 @@ class EhReconciliationExceptionWizard(models.TransientModel):
         if self.journal_ids:
             journals = self.journal_ids
         else:
-            journals = Journal.search([
-                ('type', 'in', ('bank', 'cash')),
-                ('company_id', '=', self.company_id.id),
-            ])
+            journals = Journal.search(
+                [
+                    ('type', 'in', ('bank', 'cash')),
+                    ('company_id', '=', self.company_id.id),
+                ]
+            )
 
         # One search across every journal in scope, then group in
         # Python. Same pattern for the audit lookup. Replaces 2N
         # round-trips with 2.
-        all_lines = SLine.search([
-            ('journal_id', 'in', journals.ids),
-            ('date', '>=', self.date_from),
-            ('date', '<=', self.date_to),
-        ])
+        all_lines = SLine.search(
+            [
+                ('journal_id', 'in', journals.ids),
+                ('date', '>=', self.date_from),
+                ('date', '<=', self.date_to),
+            ]
+        )
         lines_by_journal = {}
         for line in all_lines:
             bag = lines_by_journal.get(line.journal_id.id, SLine)
             lines_by_journal[line.journal_id.id] = bag | line
 
-        all_audits = Audit.search([
-            ('statement_line_id', 'in', all_lines.ids),
-            ('decided_at', '>=',
-             fields.Datetime.to_datetime(self.date_from)),
-            ('decided_at', '<=',
-             fields.Datetime.to_datetime(self.date_to + timedelta(days=1))),
-        ]) if all_lines else Audit
+        all_audits = (
+            Audit.search(
+                [
+                    ('statement_line_id', 'in', all_lines.ids),
+                    ('decided_at', '>=', fields.Datetime.to_datetime(self.date_from)),
+                    ('decided_at', '<=', fields.Datetime.to_datetime(self.date_to + timedelta(days=1))),
+                ]
+            )
+            if all_lines
+            else Audit
+        )
         # statement_line -> journal index, used to bucket audits by
         # journal without an extra read on the audit row.
-        journal_id_by_line = {
-            line.id: line.journal_id.id for line in all_lines
-        }
+        journal_id_by_line = {line.id: line.journal_id.id for line in all_lines}
         audits_by_journal = {}
         for audit in all_audits:
             j_id = journal_id_by_line.get(audit.statement_line_id.id)
@@ -175,30 +178,32 @@ class EhReconciliationExceptionWizard(models.TransientModel):
             unmatched_amount = sum(unmatched.mapped('amount') or [0.0])
             oldest_dt = min(unmatched.mapped('date'), default=None)
             oldest_days = (today - oldest_dt).days if oldest_dt else 0
-            currency = (journal.currency_id
-                        or journal.company_id.currency_id)
-            rows.append({
-                'journal_id': journal.id,
-                'name': journal.display_name,
-                'code': journal.code or '',
-                'currency': currency.name if currency else '',
-                'total_lines': len(lines),
-                'reconciled_lines': reconciled_count,
-                'unmatched_lines': len(unmatched),
-                'unmatched_amount': float(unmatched_amount or 0.0),
-                'oldest_unmatched_date':
-                    oldest_dt.isoformat() if oldest_dt else None,
-                'oldest_unmatched_days': oldest_days,
-                'write_off_count': len(audits.filtered(
-                    lambda a: a.decision == 'write_off',
-                )),
-                'skip_count': len(audits.filtered(
-                    lambda a: a.decision == 'skip',
-                )),
-                'reconciled_pct': (
-                    reconciled_count / len(lines) if lines else 0.0
-                ),
-            })
+            currency = journal.currency_id or journal.company_id.currency_id
+            rows.append(
+                {
+                    'journal_id': journal.id,
+                    'name': journal.display_name,
+                    'code': journal.code or '',
+                    'currency': currency.name if currency else '',
+                    'total_lines': len(lines),
+                    'reconciled_lines': reconciled_count,
+                    'unmatched_lines': len(unmatched),
+                    'unmatched_amount': float(unmatched_amount or 0.0),
+                    'oldest_unmatched_date': oldest_dt.isoformat() if oldest_dt else None,
+                    'oldest_unmatched_days': oldest_days,
+                    'write_off_count': len(
+                        audits.filtered(
+                            lambda a: a.decision == 'write_off',
+                        )
+                    ),
+                    'skip_count': len(
+                        audits.filtered(
+                            lambda a: a.decision == 'skip',
+                        )
+                    ),
+                    'reconciled_pct': (reconciled_count / len(lines) if lines else 0.0),
+                }
+            )
 
         totals = {
             'total_lines': sum(r['total_lines'] for r in rows),
@@ -209,9 +214,7 @@ class EhReconciliationExceptionWizard(models.TransientModel):
             'skip_count': sum(r['skip_count'] for r in rows),
         }
         if totals['total_lines']:
-            totals['reconciled_pct'] = (
-                totals['reconciled_lines'] / totals['total_lines']
-            )
+            totals['reconciled_pct'] = totals['reconciled_lines'] / totals['total_lines']
         else:
             totals['reconciled_pct'] = 0.0
 
@@ -233,6 +236,7 @@ class ReportReconciliationException(models.AbstractModel):
     ``data`` context key is missing and the render fails with KeyError. This
     hook rebuilds the same dataset the wizard exposes.
     """
+
     _name = 'report.eh_account_reconcile_pro.report_reconciliation_exception'
     _description = "Reconciliation exception report values"
 
@@ -243,7 +247,5 @@ class ReportReconciliationException(models.AbstractModel):
             'doc_ids': docids,
             'doc_model': 'eh.reconciliation.exception.wizard',
             'docs': wizards,
-            'data': {
-                wiz.id: wiz.compute_exception_data() for wiz in wizards
-            },
+            'data': {wiz.id: wiz.compute_exception_data() for wiz in wizards},
         }

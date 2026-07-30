@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -27,11 +26,10 @@ default.
 import os
 import time
 
+from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
 from odoo.tests import tagged
 
-from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
 from .common import EhAccountIntegrationTestCase
-
 
 # Thresholds (milliseconds). Tune as the engine matures.
 THRESHOLD_BUILD_MS = 5
@@ -56,11 +54,16 @@ class TestSqlBuilderPerfBaseline(EhAccountIntegrationTestCase):
         super().setUpClass()
         # Seed enough lines for a meaningful aggregate without slowing CI.
         for n in range(50):
-            cls.post_balanced_move([
-                {'account': cls.account_revenue, 'credit': 1.0,
-                 'partner': cls.partner_a if n % 2 == 0 else cls.partner_b},
-                {'account': cls.account_cash, 'debit': 1.0},
-            ])
+            cls.post_balanced_move(
+                [
+                    {
+                        'account': cls.account_revenue,
+                        'credit': 1.0,
+                        'partner': cls.partner_a if n % 2 == 0 else cls.partner_b,
+                    },
+                    {'account': cls.account_cash, 'debit': 1.0},
+                ]
+            )
 
     def _measure_ms(self, fn):
         start = time.perf_counter()
@@ -90,7 +93,8 @@ class TestSqlBuilderPerfBaseline(EhAccountIntegrationTestCase):
         build_complex_query()
         elapsed, _ = self._measure_ms(build_complex_query)
         self.assertLess(
-            elapsed, THRESHOLD_BUILD_MS,
+            elapsed,
+            THRESHOLD_BUILD_MS,
             f"build() took {elapsed:.2f}ms; threshold {THRESHOLD_BUILD_MS}ms",
         )
 
@@ -108,9 +112,9 @@ class TestSqlBuilderPerfBaseline(EhAccountIntegrationTestCase):
         elapsed, rows = self._measure_ms(run)
         self.assertEqual(len(rows), 1)
         self.assertLess(
-            elapsed, THRESHOLD_EXECUTE_TRIVIAL_MS,
-            f"trivial execute() took {elapsed:.2f}ms; "
-            f"threshold {THRESHOLD_EXECUTE_TRIVIAL_MS}ms",
+            elapsed,
+            THRESHOLD_EXECUTE_TRIVIAL_MS,
+            f"trivial execute() took {elapsed:.2f}ms; " f"threshold {THRESHOLD_EXECUTE_TRIVIAL_MS}ms",
         )
 
     def test_execute_grouped_aggregation_under_threshold(self):
@@ -128,9 +132,9 @@ class TestSqlBuilderPerfBaseline(EhAccountIntegrationTestCase):
         run()
         elapsed, _ = self._measure_ms(run)
         self.assertLess(
-            elapsed, THRESHOLD_EXECUTE_GROUPED_MS,
-            f"grouped execute() took {elapsed:.2f}ms; "
-            f"threshold {THRESHOLD_EXECUTE_GROUPED_MS}ms",
+            elapsed,
+            THRESHOLD_EXECUTE_GROUPED_MS,
+            f"grouped execute() took {elapsed:.2f}ms; " f"threshold {THRESHOLD_EXECUTE_GROUPED_MS}ms",
         )
 
 
@@ -157,27 +161,38 @@ class TestSqlBuilderPerfHeavy(EhAccountIntegrationTestCase):
         for batch in range(100):  # 100 * BATCH * 2 lines = 200k aml rows
             move_vals = []
             for n in range(BATCH):
-                move_vals.append({
-                    'move_type': 'entry',
-                    'journal_id': cls.journal_misc.id,
-                    'date': '2026-01-15',
-                    'line_ids': [
-                        (0, 0, {
-                            'account_id': cls.account_revenue.id,
-                            'credit': 1.0,
-                            'partner_id': cls.partner_a.id if n % 2 == 0 else cls.partner_b.id,
-                        }),
-                        (0, 0, {
-                            'account_id': cls.account_cash.id,
-                            'debit': 1.0,
-                        }),
-                    ],
-                })
+                move_vals.append(
+                    {
+                        'move_type': 'entry',
+                        'journal_id': cls.journal_misc.id,
+                        'date': '2026-01-15',
+                        'line_ids': [
+                            (
+                                0,
+                                0,
+                                {
+                                    'account_id': cls.account_revenue.id,
+                                    'credit': 1.0,
+                                    'partner_id': cls.partner_a.id if n % 2 == 0 else cls.partner_b.id,
+                                },
+                            ),
+                            (
+                                0,
+                                0,
+                                {
+                                    'account_id': cls.account_cash.id,
+                                    'debit': 1.0,
+                                },
+                            ),
+                        ],
+                    }
+                )
             moves = cls.env['account.move'].create(move_vals)
             moves.action_post()
 
     def test_pl_style_aggregation_100k_under_threshold(self):
         import time
+
         query = (
             MoveLineQuery(self.env, company_ids=[self.company.id])
             .select_field('account_id')
@@ -193,7 +208,7 @@ class TestSqlBuilderPerfHeavy(EhAccountIntegrationTestCase):
         elapsed_ms = (time.perf_counter() - start) * 1000
         self.assertGreater(len(rows), 0)
         self.assertLess(
-            elapsed_ms, self.THRESHOLD_100K_PL_MS,
-            f"100k aggregation took {elapsed_ms:.2f}ms; "
-            f"threshold {self.THRESHOLD_100K_PL_MS}ms",
+            elapsed_ms,
+            self.THRESHOLD_100K_PL_MS,
+            f"100k aggregation took {elapsed_ms:.2f}ms; " f"threshold {self.THRESHOLD_100K_PL_MS}ms",
         )

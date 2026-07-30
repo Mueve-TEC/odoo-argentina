@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -60,10 +59,7 @@ def pairwise_cases(axes):
         return got
 
     # Seed: full product of the two widest axes.
-    cases = [
-        {names[0]: va, names[1]: vb}
-        for va, vb in product(axes[names[0]], axes[names[1]])
-    ]
+    cases = [{names[0]: va, names[1]: vb} for va, vb in product(axes[names[0]], axes[names[1]])]
 
     # Horizontal growth: pick, for each remaining axis, the value covering
     # the most uncovered pairs for each seeded case.
@@ -104,7 +100,4 @@ def pairwise_cases(axes):
 def full_product(axes):
     """Full cartesian product as a list of dicts, deterministic order."""
     names = sorted(axes)
-    return [
-        dict(zip(names, values))
-        for values in product(*(axes[n] for n in names))
-    ]
+    return [dict(zip(names, values, strict=False)) for values in product(*(axes[n] for n in names))]

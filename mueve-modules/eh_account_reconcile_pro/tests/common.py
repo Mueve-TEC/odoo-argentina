@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -19,7 +18,6 @@ from odoo.addons.eh_account_base.tests.common import EhAccountIntegrationTestCas
 
 
 class EhReconcileIntegrationTestCase(EhAccountIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -31,12 +29,14 @@ class EhReconcileIntegrationTestCase(EhAccountIntegrationTestCase):
             limit=1,
         )
         if not cls.bank_journal:
-            cls.bank_journal = cls.env['account.journal'].create({
-                'name': 'Test Bank',
-                'code': 'TBNK',
-                'type': 'bank',
-                'company_id': cls.company.id,
-            })
+            cls.bank_journal = cls.env['account.journal'].create(
+                {
+                    'name': 'Test Bank',
+                    'code': 'TBNK',
+                    'type': 'bank',
+                    'company_id': cls.company.id,
+                }
+            )
         # The reclassification path clears a counter-leg against the
         # original suspense line, which is only possible when the journal's
         # suspense account is reconcilable. A correctly configured bank
@@ -49,8 +49,7 @@ class EhReconcileIntegrationTestCase(EhAccountIntegrationTestCase):
             suspense.sudo().reconcile = True
 
     @classmethod
-    def make_statement_line(cls, amount, partner=None, date=None,
-                            payment_ref=None, ref=None, journal=None):
+    def make_statement_line(cls, amount, partner=None, date=None, payment_ref=None, ref=None, journal=None):
         """Create and return a posted account.bank.statement.line.
 
         Bank statement lines in Odoo 17+ can be created standalone
@@ -76,13 +75,10 @@ class EhReconcileIntegrationTestCase(EhAccountIntegrationTestCase):
         """
         date = date or fields.Date.today()
         line_vals = [
-            {'account': cls.account_receivable, 'debit': amount,
-             'partner': partner},
+            {'account': cls.account_receivable, 'debit': amount, 'partner': partner},
             {'account': cls.account_revenue, 'credit': amount},
         ]
         move = cls.post_balanced_move(line_vals, date=date)
         if ref:
             move.ref = ref
-        return move.line_ids.filtered(
-            lambda l: l.account_id == cls.account_receivable
-        )
+        return move.line_ids.filtered(lambda l: l.account_id == cls.account_receivable)

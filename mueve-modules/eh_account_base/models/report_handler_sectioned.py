@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -27,9 +26,8 @@ their layout differs.
 from datetime import timedelta
 
 from odoo import _, api, models
-from odoo.tools import SQL
-
 from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
+from odoo.tools import SQL
 
 
 class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
@@ -51,18 +49,25 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         monetary amount on the right. Most section based reports use this.
         """
         return [
-            {'expression_label': 'account',
-             'name': label_name if label_name is not None else _("Description"),
-             'figure_type': 'string'},
-            {'expression_label': 'amount',
-             'name': amount_name if amount_name is not None else _("Amount"),
-             'figure_type': 'monetary'},
+            {
+                'expression_label': 'account',
+                'name': label_name if label_name is not None else _("Description"),
+                'figure_type': 'string',
+            },
+            {
+                'expression_label': 'amount',
+                'name': amount_name if amount_name is not None else _("Amount"),
+                'figure_type': 'monetary',
+            },
         ]
 
     @api.model
     def _build_comparative_column_layout(
-        self, label_name=None, current_label=None,
-        prior_label=None, variance_label=None,
+        self,
+        label_name=None,
+        current_label=None,
+        prior_label=None,
+        variance_label=None,
         variance_pct_label=None,
     ):
         """Return the comparative four-column layout: label + current
@@ -70,21 +75,31 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         options['comparison'] is set.
         """
         return [
-            {'expression_label': 'account',
-             'name': label_name if label_name is not None else _("Description"),
-             'figure_type': 'string'},
-            {'expression_label': 'amount',
-             'name': current_label if current_label is not None else _("Current"),
-             'figure_type': 'monetary'},
-            {'expression_label': 'prior_amount',
-             'name': prior_label if prior_label is not None else _("Prior"),
-             'figure_type': 'monetary'},
-            {'expression_label': 'variance',
-             'name': variance_label if variance_label is not None else _("Variance"),
-             'figure_type': 'monetary'},
-            {'expression_label': 'variance_pct',
-             'name': variance_pct_label if variance_pct_label is not None else _("Var %"),
-             'figure_type': 'percentage'},
+            {
+                'expression_label': 'account',
+                'name': label_name if label_name is not None else _("Description"),
+                'figure_type': 'string',
+            },
+            {
+                'expression_label': 'amount',
+                'name': current_label if current_label is not None else _("Current"),
+                'figure_type': 'monetary',
+            },
+            {
+                'expression_label': 'prior_amount',
+                'name': prior_label if prior_label is not None else _("Prior"),
+                'figure_type': 'monetary',
+            },
+            {
+                'expression_label': 'variance',
+                'name': variance_label if variance_label is not None else _("Variance"),
+                'figure_type': 'monetary',
+            },
+            {
+                'expression_label': 'variance_pct',
+                'name': variance_pct_label if variance_pct_label is not None else _("Var %"),
+                'figure_type': 'percentage',
+            },
         ]
 
     # ---- comparison helpers ----
@@ -112,13 +127,15 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
                 prior_from = date_from.replace(year=date_from.year - 1)
             except ValueError:
                 prior_from = date_from.replace(
-                    year=date_from.year - 1, day=date_from.day - 1,
+                    year=date_from.year - 1,
+                    day=date_from.day - 1,
                 )
             try:
                 prior_to = date_to.replace(year=date_to.year - 1)
             except ValueError:
                 prior_to = date_to.replace(
-                    year=date_to.year - 1, day=date_to.day - 1,
+                    year=date_to.year - 1,
+                    day=date_to.day - 1,
                 )
             return prior_from, prior_to, _("Same period last year")
         return None, None, ""
@@ -160,8 +177,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
                 {'expression_label': 'amount', 'value': cur_amount},
                 {'expression_label': 'prior_amount', 'value': prior_amount},
                 {'expression_label': 'variance', 'value': variance},
-                {'expression_label': 'variance_pct',
-                 'value': self._safe_pct(prior_amount, cur_amount)},
+                {'expression_label': 'variance_pct', 'value': self._safe_pct(prior_amount, cur_amount)},
             ]
             merged.append(new_line)
         # Lines that exist only in the prior period: emit them with a
@@ -204,8 +220,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         periods = []
         cur_from, cur_to = date_from, date_to
         for index in range(max(0, number)):
-            prior_from, prior_to, label = self._resolve_comparison_dates(
-                mode, cur_from, cur_to)
+            prior_from, prior_to, label = self._resolve_comparison_dates(mode, cur_from, cur_to)
             if not (prior_from and prior_to):
                 break
             if number > 1:
@@ -219,17 +234,17 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         """Label column + the current amount + one amount column per prior
         period (prior_1, prior_2, ...)."""
         columns = [
-            {'expression_label': 'account', 'name': _("Account"),
-             'figure_type': 'string'},
-            {'expression_label': 'amount',
-             'name': current_label or _("Current"),
-             'figure_type': 'monetary'},
+            {'expression_label': 'account', 'name': _("Account"), 'figure_type': 'string'},
+            {'expression_label': 'amount', 'name': current_label or _("Current"), 'figure_type': 'monetary'},
         ]
         for idx, label in enumerate(period_labels, start=1):
-            columns.append({
-                'expression_label': 'prior_%d' % idx,
-                'name': label, 'figure_type': 'monetary',
-            })
+            columns.append(
+                {
+                    'expression_label': 'prior_%d' % idx,
+                    'name': label,
+                    'figure_type': 'monetary',
+                }
+            )
         return columns
 
     @api.model
@@ -241,22 +256,21 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         zero for that period; a line that exists only in a prior period
         is appended with zero current.
         """
-        prior_maps = [
-            {l['id']: l for l in prior} for prior in prior_line_lists
-        ]
+        prior_maps = [{l['id']: l for l in prior} for prior in prior_line_lists]
         merged = []
         seen = set()
         for cur in current_lines:
             seen.add(cur['id'])
             new_line = dict(cur)
-            cols = [{'expression_label': 'amount',
-                     'value': self._line_first_value(cur)}]
+            cols = [{'expression_label': 'amount', 'value': self._line_first_value(cur)}]
             for idx, prior_map in enumerate(prior_maps, start=1):
                 prior = prior_map.get(cur['id'])
-                cols.append({
-                    'expression_label': 'prior_%d' % idx,
-                    'value': self._line_first_value(prior) if prior else 0.0,
-                })
+                cols.append(
+                    {
+                        'expression_label': 'prior_%d' % idx,
+                        'value': self._line_first_value(prior) if prior else 0.0,
+                    }
+                )
             new_line['columns'] = cols
             merged.append(new_line)
         # Lines present only in a prior period (rare but possible).
@@ -268,11 +282,12 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
                 cols = [{'expression_label': 'amount', 'value': 0.0}]
                 for j, other_map in enumerate(prior_maps, start=1):
                     other = other_map.get(prior_id)
-                    cols.append({
-                        'expression_label': 'prior_%d' % j,
-                        'value': (self._line_first_value(other)
-                                  if other else 0.0),
-                    })
+                    cols.append(
+                        {
+                            'expression_label': 'prior_%d' % j,
+                            'value': (self._line_first_value(other) if other else 0.0),
+                        }
+                    )
                 new_line = dict(prior)
                 new_line['columns'] = cols
                 merged.append(new_line)
@@ -284,16 +299,11 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
     def _build_horizontal_column_layout(self, group_labels):
         """Label column + one amount column per group + a total column."""
         columns = [
-            {'expression_label': 'account', 'name': _("Account"),
-             'figure_type': 'string'},
+            {'expression_label': 'account', 'name': _("Account"), 'figure_type': 'string'},
         ]
         for idx, label in enumerate(group_labels, start=1):
-            columns.append({
-                'expression_label': 'group_%d' % idx,
-                'name': label, 'figure_type': 'monetary'})
-        columns.append({
-            'expression_label': 'total', 'name': _("Total"),
-            'figure_type': 'monetary'})
+            columns.append({'expression_label': 'group_%d' % idx, 'name': label, 'figure_type': 'monetary'})
+        columns.append({'expression_label': 'total', 'name': _("Total"), 'figure_type': 'monetary'})
         return columns
 
     @api.model
@@ -311,13 +321,10 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
             cols = []
             total = 0.0
             for idx, group_map in enumerate(maps, start=1):
-                value = (self._line_first_value(group_map[line_id])
-                         if line_id in group_map else 0.0)
-                cols.append({'expression_label': 'group_%d' % idx,
-                             'value': round(value, 2)})
+                value = self._line_first_value(group_map[line_id]) if line_id in group_map else 0.0
+                cols.append({'expression_label': 'group_%d' % idx, 'value': round(value, 2)})
                 total += value
-            cols.append({'expression_label': 'total',
-                         'value': round(total, 2)})
+            cols.append({'expression_label': 'total', 'value': round(total, 2)})
             row = dict(template)
             row['columns'] = cols
             return row
@@ -339,9 +346,14 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
 
     @api.model
     def _fetch_grouped_account_totals(
-        self, account_types=None, company_ids=None,
-        date_from=None, date_to=None,
-        posted_only=True, options=None, sign=1,
+        self,
+        account_types=None,
+        company_ids=None,
+        date_from=None,
+        date_to=None,
+        posted_only=True,
+        options=None,
+        sign=1,
     ):
         """Run a per account aggregation and return a list of dicts.
 
@@ -356,9 +368,13 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         company_ids = company_ids or [self.env.company.id]
         if options.get('cash_basis'):
             return self._cash_basis_grouped_totals(
-                account_types=account_types, company_ids=company_ids,
-                date_from=date_from, date_to=date_to,
-                posted_only=posted_only, options=options, sign=sign,
+                account_types=account_types,
+                company_ids=company_ids,
+                date_from=date_from,
+                date_to=date_to,
+                posted_only=posted_only,
+                options=options,
+                sign=sign,
             )
         query = MoveLineQuery(self.env, company_ids=company_ids)
         query.where_date_range(date_from=date_from, date_to=date_to)
@@ -392,9 +408,14 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
 
     @api.model
     def _fetch_aggregate_balance(
-        self, account_types=None, company_ids=None,
-        date_from=None, date_to=None,
-        posted_only=True, options=None, sign=1,
+        self,
+        account_types=None,
+        company_ids=None,
+        date_from=None,
+        date_to=None,
+        posted_only=True,
+        options=None,
+        sign=1,
     ):
         """Return a scalar: sum of balance with the given filters, multiplied
         by sign. No group by. Useful for computed lines like Current Year
@@ -420,8 +441,14 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
 
     @api.model
     def _cash_basis_grouped_totals(
-        self, account_types, company_ids, date_from, date_to,
-        posted_only, options, sign,
+        self,
+        account_types,
+        company_ids,
+        date_from,
+        date_to,
+        posted_only,
+        options,
+        sign,
     ):
         """Per-account totals recognised on a cash basis.
 
@@ -432,6 +459,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         shape so callers swap transparently.
         """
         from collections import defaultdict
+
         domain = [
             ('account_id.account_type', 'in', list(account_types or [])),
             ('company_id', 'in', list(company_ids)),
@@ -454,21 +482,21 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         for line in lines:
             move = line.move_id
             if move.id not in fraction_cache:
-                fraction_cache[move.id] = self._eh_move_paid_fraction(
-                    move, date_to)
+                fraction_cache[move.id] = self._eh_move_paid_fraction(move, date_to)
             totals[line.account_id.id] += line.balance * fraction_cache[move.id]
-            meta[line.account_id.id] = (
-                line.account_id.code, line.account_id.name)
+            meta[line.account_id.id] = (line.account_id.code, line.account_id.name)
 
         rows = []
         for account_id, total in totals.items():
             code, name = meta[account_id]
-            rows.append({
-                'account_id': account_id,
-                'account_code': code,
-                'account_name': name,
-                'amount': total * sign,
-            })
+            rows.append(
+                {
+                    'account_id': account_id,
+                    'account_code': code,
+                    'account_name': name,
+                    'amount': total * sign,
+                }
+            )
         rows.sort(key=lambda r: r['account_code'] or '')
         return rows
 
@@ -477,18 +505,14 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         """Fraction (0..1) of `move` settled as of date_to, measured on
         its receivable/payable lines. No AR/AP line -> fully recognised
         (a direct cash entry)."""
-        ar_ap = move.line_ids.filtered(
-            lambda l: l.account_id.account_type in (
-                'asset_receivable', 'liability_payable'))
+        ar_ap = move.line_ids.filtered(lambda l: l.account_id.account_type in ('asset_receivable', 'liability_payable'))
         if not ar_ap:
             return 1.0
         total = sum(abs(l.balance) for l in ar_ap)
         if not total:
             return 1.0
         partials = ar_ap.matched_debit_ids | ar_ap.matched_credit_ids
-        reconciled = sum(
-            p.amount for p in partials
-            if p.max_date and p.max_date <= date_to)
+        reconciled = sum(p.amount for p in partials if p.max_date and p.max_date <= date_to)
         return max(0.0, min(1.0, reconciled / total))
 
     # ---- line factories ----
@@ -534,11 +558,19 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
     # P&L / Balance-Sheet display convention from accounting first
     # principles (assets and expenses debit-natural; income, liabilities,
     # equity credit-natural).
-    _DEBIT_NATURAL_TYPES = frozenset({
-        'asset_receivable', 'asset_cash', 'asset_current',
-        'asset_non_current', 'asset_prepayments', 'asset_fixed',
-        'expense', 'expense_depreciation', 'expense_direct_cost',
-    })
+    _DEBIT_NATURAL_TYPES = frozenset(
+        {
+            'asset_receivable',
+            'asset_cash',
+            'asset_current',
+            'asset_non_current',
+            'asset_prepayments',
+            'asset_fixed',
+            'expense',
+            'expense_depreciation',
+            'expense_direct_cost',
+        }
+    )
 
     @api.model
     def _expand_account_sign(self, account):
@@ -569,28 +601,34 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
         sign = self._expand_account_sign(account)
         signed = round(float(aml_row.get('balance') or 0.0) * sign, 2)
         date_val = aml_row.get('date')
-        return [{
-            'id': "aml-%s" % aml_row.get('aml_id'),
-            'name': aml_row.get('ref') or aml_row.get('line_label') or '',
-            'level': 2,
-            'columns': [{'expression_label': 'amount', 'value': signed}],
-            'unfoldable': False,
-            'unfolded': False,
-            'lazy': False,
-            'meta': {
-                'kind': 'aml',
-                'aml_id': aml_row.get('aml_id'),
-                'account_id': account_id,
-                'date': self._iso_date(date_val) if date_val else None,
-                'move': aml_row.get('move_name') or '',
-                'partner': aml_row.get('partner_name') or '',
-            },
-        }]
+        return [
+            {
+                'id': "aml-%s" % aml_row.get('aml_id'),
+                'name': aml_row.get('ref') or aml_row.get('line_label') or '',
+                'level': 2,
+                'columns': [{'expression_label': 'amount', 'value': signed}],
+                'unfoldable': False,
+                'unfolded': False,
+                'lazy': False,
+                'meta': {
+                    'kind': 'aml',
+                    'aml_id': aml_row.get('aml_id'),
+                    'account_id': account_id,
+                    'date': self._iso_date(date_val) if date_val else None,
+                    'move': aml_row.get('move_name') or '',
+                    'partner': aml_row.get('partner_name') or '',
+                },
+            }
+        ]
 
     @api.model
     def _render_account_lines_grouped(
-        self, rows, section_id, show_zero=False,
-        unfolded_ids=None, options=None,
+        self,
+        rows,
+        section_id,
+        show_zero=False,
+        unfolded_ids=None,
+        options=None,
     ):
         """Convert per-account totals into a hierarchical line list
         nested by account.group.
@@ -651,9 +689,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
             # Accumulate at every ancestor depth.
             for entry in path:
                 cumulative = cumulative + (entry[0],)
-                group_totals[cumulative] = (
-                    group_totals.get(cumulative, 0.0) + amount_by_id[acc_id]
-                )
+                group_totals[cumulative] = group_totals.get(cumulative, 0.0) + amount_by_id[acc_id]
             # Track which group is the immediate parent for ungrouped
             # accounts (path empty -> attach to section header directly).
             parent_path = tuple(e[0] for e in path)
@@ -679,6 +715,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
             for g in parent_path:
                 cumulative = cumulative + (g,)
                 all_paths.add(cumulative)
+
         # Sort paths so parents render before children, and siblings
         # render in code-prefix order to match the chart-of-accounts.
         def _path_sort_key(p):
@@ -689,6 +726,7 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
                 grp = Group.browse(gid)
                 keys.append((grp.code_prefix_start or '', gid))
             return keys
+
         ordered_paths = sorted(all_paths, key=_path_sort_key)
 
         # For each path, emit the group header then any accounts that
@@ -729,29 +767,29 @@ class EhAccountDynamicReportSectionedHandler(models.AbstractModel):
             parent_path = path[:-1]
             parent_id = _line_id_for_path(parent_path)
             this_id = _line_id_for_path(path)
-            unfolded = (
-                not unfolded_ids
-                or this_id in unfolded_ids
+            unfolded = not unfolded_ids or this_id in unfolded_ids
+            lines.append(
+                {
+                    'id': this_id,
+                    'name': "%s %s"
+                    % (
+                        grp.code_prefix_start or '',
+                        grp.display_name or grp.name or '',
+                    ),
+                    'level': depth,
+                    'parent_id': parent_id,
+                    'columns': [
+                        {'expression_label': 'amount', 'value': path_total},
+                    ],
+                    'unfoldable': True,
+                    'unfolded': unfolded,
+                    'meta': {
+                        'kind': 'account_group',
+                        'group_id': grp.id,
+                        'depth': depth,
+                    },
+                }
             )
-            lines.append({
-                'id': this_id,
-                'name': "%s %s" % (
-                    grp.code_prefix_start or '',
-                    grp.display_name or grp.name or '',
-                ),
-                'level': depth,
-                'parent_id': parent_id,
-                'columns': [
-                    {'expression_label': 'amount', 'value': path_total},
-                ],
-                'unfoldable': True,
-                'unfolded': unfolded,
-                'meta': {
-                    'kind': 'account_group',
-                    'group_id': grp.id,
-                    'depth': depth,
-                },
-            })
             # Accounts whose parent path is exactly this path.
             for aid in sorted(
                 accounts_by_group.get(path, []),

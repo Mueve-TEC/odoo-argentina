@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -38,10 +37,7 @@ class EhReportSavedView(models.Model):
         default=lambda self: self.env.user,
         ondelete='cascade',
         index=True,
-        help=(
-            "Owner of the view. The owner can edit and delete; other users "
-            "can read it only when shared is True."
-        ),
+        help=("Owner of the view. The owner can edit and delete; other users " "can read it only when shared is True."),
     )
     company_id = fields.Many2one(
         'res.company',
@@ -75,9 +71,12 @@ class EhReportSavedView(models.Model):
             try:
                 payload = json.loads(rec.options_json)
             except ValueError as exc:
-                raise ValidationError(_(
-                    "options_json must be valid JSON (got %s).",
-                ) % exc)
+                raise ValidationError(
+                    _(
+                        "options_json must be valid JSON (got %s).",
+                    )
+                    % exc
+                )
             if not isinstance(payload, dict):
                 raise ValidationError(_("options_json must encode a dict."))
 
@@ -95,20 +94,28 @@ class EhReportSavedView(models.Model):
             ('user_id', '=', self.env.user.id),
             '&',
             ('shared', '=', True),
-            ('company_id', 'in', list(
-                self.env.context.get(
-                    'allowed_company_ids', [self.env.company.id],
+            (
+                'company_id',
+                'in',
+                list(
+                    self.env.context.get(
+                        'allowed_company_ids',
+                        [self.env.company.id],
+                    ),
                 ),
-            )),
+            ),
         ]
         records = self.search(domain, order='shared desc, name')
-        return [{
-            'id': r.id,
-            'name': r.name,
-            'shared': r.shared,
-            'owned': r.user_id.id == self.env.user.id,
-            'notes': r.notes or '',
-        } for r in records]
+        return [
+            {
+                'id': r.id,
+                'name': r.name,
+                'shared': r.shared,
+                'owned': r.user_id.id == self.env.user.id,
+                'notes': r.notes or '',
+            }
+            for r in records
+        ]
 
     @api.model
     def save_view(self, name, report_code, options, shared=False, notes=None):
@@ -117,11 +124,14 @@ class EhReportSavedView(models.Model):
 
         Returns the persisted record id.
         """
-        existing = self.search([
-            ('user_id', '=', self.env.user.id),
-            ('report_code', '=', report_code),
-            ('name', '=', name),
-        ], limit=1)
+        existing = self.search(
+            [
+                ('user_id', '=', self.env.user.id),
+                ('report_code', '=', report_code),
+                ('name', '=', name),
+            ],
+            limit=1,
+        )
         vals = {
             'name': name,
             'report_code': report_code,
@@ -148,6 +158,9 @@ class EhReportSavedView(models.Model):
         # but only the owner can remove it.
         for rec in self:
             if rec.user_id and rec.user_id.id != self.env.user.id:
-                raise ValidationError(_(
-                    "Only the owner can delete a saved view (%s).",
-                ) % rec.name)
+                raise ValidationError(
+                    _(
+                        "Only the owner can delete a saved view (%s).",
+                    )
+                    % rec.name
+                )

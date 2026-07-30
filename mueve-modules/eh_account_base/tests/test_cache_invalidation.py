@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -24,13 +23,14 @@ from .common import EhAccountIntegrationTestCase
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestCacheInvalidationHook(EhAccountIntegrationTestCase):
-
     def test_post_bumps_version(self):
         before = self.company.eh_move_version
-        self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 100.0},
-            {'account': self.account_cash, 'debit': 100.0},
-        ])
+        self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 100.0},
+                {'account': self.account_cash, 'debit': 100.0},
+            ]
+        )
         self.company.invalidate_recordset(['eh_move_version'])
         self.assertGreater(
             self.company.eh_move_version,
@@ -39,10 +39,12 @@ class TestCacheInvalidationHook(EhAccountIntegrationTestCase):
         )
 
     def test_cancel_bumps_version(self):
-        move = self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 50.0},
-            {'account': self.account_cash, 'debit': 50.0},
-        ])
+        move = self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 50.0},
+                {'account': self.account_cash, 'debit': 50.0},
+            ]
+        )
         self.company.invalidate_recordset(['eh_move_version'])
         post_version = self.company.eh_move_version
 
@@ -55,10 +57,12 @@ class TestCacheInvalidationHook(EhAccountIntegrationTestCase):
         )
 
     def test_draft_bumps_version(self):
-        move = self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 75.0},
-            {'account': self.account_cash, 'debit': 75.0},
-        ])
+        move = self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 75.0},
+                {'account': self.account_cash, 'debit': 75.0},
+            ]
+        )
         self.company.invalidate_recordset(['eh_move_version'])
         post_version = self.company.eh_move_version
 
@@ -71,10 +75,12 @@ class TestCacheInvalidationHook(EhAccountIntegrationTestCase):
         )
 
     def test_unrelated_write_does_not_bump(self):
-        move = self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 60.0},
-            {'account': self.account_cash, 'debit': 60.0},
-        ])
+        move = self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 60.0},
+                {'account': self.account_cash, 'debit': 60.0},
+            ]
+        )
         self.company.invalidate_recordset(['eh_move_version'])
         baseline = self.company.eh_move_version
 
@@ -88,19 +94,22 @@ class TestCacheInvalidationHook(EhAccountIntegrationTestCase):
         )
 
     def test_post_bumps_each_company_independently(self):
-        other_company = self.env['res.company'].create({
-            'name': 'Second Company',
-            'currency_id': self.company.currency_id.id,
-        })
+        other_company = self.env['res.company'].create(
+            {
+                'name': 'Second Company',
+                'currency_id': self.company.currency_id.id,
+            }
+        )
 
         # Post in our default company.
-        self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 10.0},
-            {'account': self.account_cash, 'debit': 10.0},
-        ])
+        self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 10.0},
+                {'account': self.account_cash, 'debit': 10.0},
+            ]
+        )
         self.env['res.company'].invalidate_model(['eh_move_version'])
         v_self = self.company.eh_move_version
         v_other = other_company.eh_move_version
         self.assertGreater(v_self, 0)
-        self.assertEqual(v_other, 0,
-                         "Other company's counter must not be bumped")
+        self.assertEqual(v_other, 0, "Other company's counter must not be bumped")

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -35,7 +34,6 @@ eh.gl.reversal
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
-
 
 # Context flag set while a legitimate action writes a guarded field.
 EH_WORKFLOW_ACTION = 'eh_workflow_action'
@@ -80,13 +78,12 @@ class EhWorkflowGuard(models.AbstractModel):
         # sentinel (the old 'eh_workflow_action' key) is forgeable by the
         # client and provides no real protection.
         if not self.env.su:
-            guarded = set(self._eh_create_guarded_fields
-                          if self._eh_create_guarded_fields is not None
-                          else self._eh_guarded_fields)
-            vals_list = [
-                {k: v for k, v in (vals or {}).items() if k not in guarded}
-                for vals in vals_list
-            ]
+            guarded = set(
+                self._eh_create_guarded_fields
+                if self._eh_create_guarded_fields is not None
+                else self._eh_guarded_fields
+            )
+            vals_list = [{k: v for k, v in (vals or {}).items() if k not in guarded} for vals in vals_list]
         return super().create(vals_list)
 
     def write(self, vals):
@@ -97,13 +94,15 @@ class EhWorkflowGuard(models.AbstractModel):
         if not self.env.su:
             blocked = set(vals) & set(self._eh_guarded_fields)
             if blocked:
-                raise AccessError(_(
-                    "%(model)s: fields %(fields)s can only change through "
-                    "the record's own actions, not a direct write. Use the "
-                    "provided buttons/methods.",
-                    model=self._description,
-                    fields=', '.join(sorted(blocked)),
-                ))
+                raise AccessError(
+                    _(
+                        "%(model)s: fields %(fields)s can only change through "
+                        "the record's own actions, not a direct write. Use the "
+                        "provided buttons/methods.",
+                        model=self._description,
+                        fields=', '.join(sorted(blocked)),
+                    )
+                )
         return super().write(vals)
 
     def _eh_workflow_write(self, vals):
@@ -130,8 +129,7 @@ class EhPostOnce(models.AbstractModel):
     _name = 'eh.post.once'
     _description = "Post-once idempotency helper"
 
-    def _eh_assert_source_unposted(self, source_field, posted_states=('posted',),
-                                   state_field='state'):
+    def _eh_assert_source_unposted(self, source_field, posted_states=('posted',), state_field='state'):
         """Refuse if another posted record already consumed the same source.
 
         :param source_field: name of the x2many/x2one field carrying the
@@ -144,18 +142,23 @@ class EhPostOnce(models.AbstractModel):
         source_ids = source.ids if hasattr(source, 'ids') else [source.id]
         if not source_ids:
             return
-        dup = self.search([
-            (state_field, 'in', list(posted_states)),
-            ('id', '!=', self.id),
-            (source_field, 'in', source_ids),
-        ], limit=5)
+        dup = self.search(
+            [
+                (state_field, 'in', list(posted_states)),
+                ('id', '!=', self.id),
+                (source_field, 'in', source_ids),
+            ],
+            limit=5,
+        )
         if dup:
-            raise UserError(_(
-                "The source records this posts were already booked by "
-                "%(recs)s. A period/source can only be posted once; reverse "
-                "the existing posting first.",
-                recs=', '.join(dup.mapped('display_name')),
-            ))
+            raise UserError(
+                _(
+                    "The source records this posts were already booked by "
+                    "%(recs)s. A period/source can only be posted once; reverse "
+                    "the existing posting first.",
+                    recs=', '.join(dup.mapped('display_name')),
+                )
+            )
 
 
 class EhGlReversal(models.AbstractModel):
@@ -181,11 +184,9 @@ class EhGlReversal(models.AbstractModel):
         """
         if not reversal_moves:
             return reversal_moves
-        sealable = reversal_moves.filtered(
-            lambda m: 'eh_sealed' in m._fields and not m.eh_sealed)
+        sealable = reversal_moves.filtered(lambda m: 'eh_sealed' in m._fields and not m.eh_sealed)
         if sealable:
-            sealable.sudo().with_context(eh_seal_internal=True).write(
-                {'eh_sealed': True})
+            sealable.sudo().with_context(eh_seal_internal=True).write({'eh_sealed': True})
         return reversal_moves
 
     def _eh_reverse_sealed_move(self, move, date=None, ref=None, cancel=True):
@@ -196,8 +197,13 @@ class EhGlReversal(models.AbstractModel):
         """
         if not move:
             return move.browse()
-        reversal = move._reverse_moves([{
-            'date': date or fields.Date.context_today(self),
-            'ref': ref or _("Reversal of %s", move.name or move.display_name),
-        }], cancel=cancel)
+        reversal = move._reverse_moves(
+            [
+                {
+                    'date': date or fields.Date.context_today(self),
+                    'ref': ref or _("Reversal of %s", move.name or move.display_name),
+                }
+            ],
+            cancel=cancel,
+        )
         return self._eh_seal_reversal(reversal)

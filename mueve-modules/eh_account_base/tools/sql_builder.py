@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -38,25 +37,58 @@ _ACCOUNT_CODE_JSONB = version_info[0] >= 17
 _ACCOUNT_NAME_JSONB = version_info[0] >= 17
 
 
-_AML_FIELDS = frozenset({
-    'id', 'move_id', 'account_id', 'journal_id', 'partner_id',
-    'company_id', 'currency_id', 'date', 'date_maturity',
-    'debit', 'credit', 'balance', 'amount_currency',
-    'amount_residual', 'amount_residual_currency',
-    'name', 'ref', 'sequence',
-    'reconciled', 'full_reconcile_id', 'matching_number',
-    'tax_line_id', 'analytic_distribution',
-    'parent_state',
-})
+_AML_FIELDS = frozenset(
+    {
+        'id',
+        'move_id',
+        'account_id',
+        'journal_id',
+        'partner_id',
+        'company_id',
+        'currency_id',
+        'date',
+        'date_maturity',
+        'debit',
+        'credit',
+        'balance',
+        'amount_currency',
+        'amount_residual',
+        'amount_residual_currency',
+        'name',
+        'ref',
+        'sequence',
+        'reconciled',
+        'full_reconcile_id',
+        'matching_number',
+        'tax_line_id',
+        'analytic_distribution',
+        'parent_state',
+    }
+)
 
-_ACCOUNT_FIELDS = frozenset({
-    'id', 'code', 'name', 'account_type', 'reconcile',
-})
+_ACCOUNT_FIELDS = frozenset(
+    {
+        'id',
+        'code',
+        'name',
+        'account_type',
+        'reconcile',
+    }
+)
 
-_MOVE_FIELDS = frozenset({
-    'id', 'state', 'move_type', 'date', 'partner_id',
-    'invoice_date', 'invoice_date_due', 'name', 'ref',
-})
+_MOVE_FIELDS = frozenset(
+    {
+        'id',
+        'state',
+        'move_type',
+        'date',
+        'partner_id',
+        'invoice_date',
+        'invoice_date_due',
+        'name',
+        'ref',
+    }
+)
 
 _IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
@@ -80,12 +112,9 @@ class MoveLineQuery:
         # rows: [{'account_id': 5, 'balance': -1234.56}, ...]
     """
 
-    def __init__(self, env, company_ids, currency_table=None,
-                 presentation_currency_id=None):
+    def __init__(self, env, company_ids, currency_table=None, presentation_currency_id=None):
         if not company_ids:
-            raise MoveLineQueryError(
-                "MoveLineQuery requires at least one company id"
-            )
+            raise MoveLineQueryError("MoveLineQuery requires at least one company id")
         self.env = env
         self.company_ids = tuple(int(c) for c in company_ids)
         self._select_exprs = []
@@ -117,13 +146,10 @@ class MoveLineQuery:
             or underscore. Validated here.
         """
         if not isinstance(expr, SQL):
-            raise MoveLineQueryError(
-                "select(expr, alias) expects expr to be a SQL instance"
-            )
+            raise MoveLineQueryError("select(expr, alias) expects expr to be a SQL instance")
         if not isinstance(alias, str) or not _IDENTIFIER_RE.match(alias):
             raise MoveLineQueryError(
-                f"alias must be alphanumeric and underscore starting with a "
-                f"letter or underscore, got {alias!r}"
+                f"alias must be alphanumeric and underscore starting with a " f"letter or underscore, got {alias!r}"
             )
         self._select_exprs.append(expr)
         self._select_aliases.append((alias, SQL.identifier(alias)))
@@ -131,16 +157,12 @@ class MoveLineQuery:
 
     def select_field(self, field_name, alias=None):
         if field_name not in _AML_FIELDS:
-            raise MoveLineQueryError(
-                f"unknown account_move_line field {field_name!r}"
-            )
+            raise MoveLineQueryError(f"unknown account_move_line field {field_name!r}")
         return self.select(SQL("aml.%s" % field_name), alias or field_name)
 
     def select_account_field(self, field_name, alias=None):
         if field_name not in _ACCOUNT_FIELDS:
-            raise MoveLineQueryError(
-                f"unknown account_account field {field_name!r}"
-            )
+            raise MoveLineQueryError(f"unknown account_account field {field_name!r}")
         self._joined_tables.add('account_account')
         # In Odoo 19, account.account.code is per company and stored as a
         # jsonb column 'code_store' keyed by company_id (as text); name
@@ -262,10 +284,7 @@ class MoveLineQuery:
             return self
         self._joined_tables.add('account_account')
         # Odoo 19: code is per company in acc.code_store jsonb.
-        clauses = [
-            self._account_code_like_sql(f"{p}%")
-            for p in prefixes
-        ]
+        clauses = [self._account_code_like_sql(f"{p}%") for p in prefixes]
         joined = SQL(" OR ").join(clauses)
         self._wheres.append(SQL("(%s)", joined))
         return self
@@ -296,9 +315,12 @@ class MoveLineQuery:
         if not ids:
             return self
         keys = [str(i) for i in ids]
-        self._wheres.append(SQL(
-            "aml.analytic_distribution ?| %s", keys,
-        ))
+        self._wheres.append(
+            SQL(
+                "aml.analytic_distribution ?| %s",
+                keys,
+            )
+        )
         return self
 
     def where_analytic_plans(self, plan_ids):
@@ -353,17 +375,13 @@ class MoveLineQuery:
             elif isinstance(f, SQL):
                 self._group_by_exprs.append(f)
             else:
-                raise MoveLineQueryError(
-                    f"group_by expects str or SQL, got {type(f).__name__}"
-                )
+                raise MoveLineQueryError(f"group_by expects str or SQL, got {type(f).__name__}")
         return self
 
     def order_by(self, expr, direction='ASC'):
         direction = (direction or 'ASC').upper()
         if direction not in ('ASC', 'DESC'):
-            raise MoveLineQueryError(
-                f"direction must be ASC or DESC, got {direction!r}"
-            )
+            raise MoveLineQueryError(f"direction must be ASC or DESC, got {direction!r}")
         if isinstance(expr, str):
             if expr not in _AML_FIELDS:
                 raise MoveLineQueryError(f"unknown orderable field {expr!r}")
@@ -371,9 +389,7 @@ class MoveLineQuery:
         elif isinstance(expr, SQL):
             expr_sql = expr
         else:
-            raise MoveLineQueryError(
-                f"order_by expects str or SQL, got {type(expr).__name__}"
-            )
+            raise MoveLineQueryError(f"order_by expects str or SQL, got {type(expr).__name__}")
         # direction is whitelisted, safe to splice into the format string.
         self._order_by_exprs.append(SQL("%s " + direction, expr_sql))
         return self
@@ -381,9 +397,7 @@ class MoveLineQuery:
     def order_by_account_field(self, field_name, direction='ASC'):
         """Convenience: order by a column on the joined account_account table."""
         if field_name not in _ACCOUNT_FIELDS:
-            raise MoveLineQueryError(
-                f"unknown account_account field {field_name!r}"
-            )
+            raise MoveLineQueryError(f"unknown account_account field {field_name!r}")
         self._joined_tables.add('account_account')
         if field_name == 'code':
             expr = self._account_code_sql()
@@ -404,9 +418,7 @@ class MoveLineQuery:
         en_US. Reusing this helper keeps the three call sites in lock-step.
         """
         if field_name not in _ACCOUNT_FIELDS:
-            raise MoveLineQueryError(
-                f"unknown account_account field {field_name!r}"
-            )
+            raise MoveLineQueryError(f"unknown account_account field {field_name!r}")
         self._joined_tables.add('account_account')
         if field_name == 'code':
             expr = self._account_code_sql()
@@ -429,7 +441,8 @@ class MoveLineQuery:
         _account_code_sql)."""
         if _ACCOUNT_CODE_JSONB:
             return SQL(
-                "(acc.code_store ->> aml.company_id::text) LIKE %s", pattern,
+                "(acc.code_store ->> aml.company_id::text) LIKE %s",
+                pattern,
             )
         return SQL("acc.code LIKE %s", pattern)
 
@@ -448,7 +461,8 @@ class MoveLineQuery:
         if lang == 'en_US':
             return SQL("(acc.name ->> 'en_US')")
         return SQL(
-            "COALESCE(acc.name ->> %s, acc.name ->> 'en_US')", lang,
+            "COALESCE(acc.name ->> %s, acc.name ->> 'en_US')",
+            lang,
         )
 
     def limit(self, n):
@@ -466,14 +480,14 @@ class MoveLineQuery:
     def build(self):
         """Compose the final SQL primitive without executing it."""
         if not self._select_exprs:
-            raise MoveLineQueryError(
-                "MoveLineQuery requires at least one select() before build()"
-            )
+            raise MoveLineQueryError("MoveLineQuery requires at least one select() before build()")
 
         # SELECT clause: "expr AS alias, expr AS alias, ...".
         select_parts = []
         for expr, (_alias_str, alias_sql) in zip(
-            self._select_exprs, self._select_aliases,
+            self._select_exprs,
+            self._select_aliases,
+            strict=False,
         ):
             select_parts.append(SQL("%s AS %s", expr, alias_sql))
         select_clause = SQL(", ").join(select_parts)
@@ -511,18 +525,22 @@ class MoveLineQuery:
 
         sql = SQL(
             "SELECT %s FROM account_move_line aml %s WHERE %s",
-            select_clause, joins_clause, where_clause,
+            select_clause,
+            joins_clause,
+            where_clause,
         )
 
         if self._group_by_exprs:
             sql = SQL(
                 "%s GROUP BY %s",
-                sql, SQL(", ").join(self._group_by_exprs),
+                sql,
+                SQL(", ").join(self._group_by_exprs),
             )
         if self._order_by_exprs:
             sql = SQL(
                 "%s ORDER BY %s",
-                sql, SQL(", ").join(self._order_by_exprs),
+                sql,
+                SQL(", ").join(self._order_by_exprs),
             )
         if self._limit is not None:
             sql = SQL("%s LIMIT %s", sql, self._limit)
@@ -543,4 +561,4 @@ class MoveLineQuery:
         cr = self.env.cr
         cr.execute(sql)
         column_keys = [alias for alias, _ in self._select_aliases]
-        return [dict(zip(column_keys, row)) for row in cr.fetchall()]
+        return [dict(zip(column_keys, row, strict=False)) for row in cr.fetchall()]

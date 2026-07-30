@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -44,13 +43,12 @@ def decompress_payload(blob):
     if not blob:
         return None
     import base64
+
     # Odoo 19 Binary fields surface as base64 strings or base64 bytes on
     # read. If the first byte is not our version marker, base64-decode.
     if isinstance(blob, str):
         blob = base64.b64decode(blob)
-    elif isinstance(blob, (bytes, bytearray)) and (
-        not blob or blob[0] != _CODEC_VERSION_ZLIB_JSON
-    ):
+    elif isinstance(blob, (bytes, bytearray)) and (not blob or blob[0] != _CODEC_VERSION_ZLIB_JSON):
         try:
             blob = base64.b64decode(blob)
         except Exception:  # noqa: BLE001

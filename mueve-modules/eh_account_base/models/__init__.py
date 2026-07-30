@@ -1,15 +1,17 @@
-from . import audit_mixins
-from . import workflow_mixins
-from . import res_company
-from . import res_partner
-from . import res_config_settings
-from . import account_move
-from . import account_account
-from . import report_execution
-from . import report_handler_base
-from . import report_handler_sectioned
-from . import dynamic_report
-from . import report_annotation
-from . import report_wizard
-from . import saved_view
-from . import report_fold_state
+from . import (
+    account_account,
+    account_move,
+    audit_mixins,
+    dynamic_report,
+    report_annotation,
+    report_execution,
+    report_fold_state,
+    report_handler_base,
+    report_handler_sectioned,
+    report_wizard,
+    res_company,
+    res_config_settings,
+    res_partner,
+    saved_view,
+    workflow_mixins,
+)

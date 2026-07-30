@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -36,7 +35,6 @@ import re
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-
 _CODE_RE = re.compile(r'^[a-z][a-z0-9_]*$')
 
 
@@ -48,14 +46,16 @@ class EhReconciliationRule(models.Model):
 
     name = fields.Char(required=True, translate=True)
     code = fields.Char(
-        required=True, copy=False,
+        required=True,
+        copy=False,
         help="Stable identifier surfaced in the audit log when the rule fires.",
     )
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
 
     company_id = fields.Many2one(
-        'res.company', required=True,
+        'res.company',
+        required=True,
         default=lambda self: self.env.company,
     )
 
@@ -64,7 +64,8 @@ class EhReconciliationRule(models.Model):
     journal_ids = fields.Many2many(
         'account.journal',
         'eh_recon_rule_journal_rel',
-        'rule_id', 'journal_id',
+        'rule_id',
+        'journal_id',
         domain="[('type', 'in', ['bank', 'cash'])]",
         help="Limit this rule to specific bank or cash journals. Empty means all bank/cash journals in the company.",
     )
@@ -74,7 +75,8 @@ class EhReconciliationRule(models.Model):
             ('match', "Suggest a match against a journal item"),
             ('write_off', "Auto write-off to a fixed account"),
         ],
-        required=True, default='match',
+        required=True,
+        default='match',
     )
 
     # ---- pattern matching against the statement line ----
@@ -101,7 +103,8 @@ class EhReconciliationRule(models.Model):
             ('credit', "Credit only (money in)"),
             ('debit', "Debit only (money out)"),
         ],
-        default='any', required=True,
+        default='any',
+        required=True,
     )
 
     # ---- write-off target ----
@@ -120,15 +123,16 @@ class EhReconciliationRule(models.Model):
             ('fixed', "Fixed amount"),
             ('percentage', "Percentage of statement amount"),
         ],
-        default='residual', required=True,
+        default='residual',
+        required=True,
         help="How much of the statement line to write off: the whole "
-             "remaining residual, a fixed amount (capped at the residual), "
-             "or a percentage of the statement amount.",
+        "remaining residual, a fixed amount (capped at the residual), "
+        "or a percentage of the statement amount.",
     )
     writeoff_amount = fields.Float(
         digits=(16, 2),
         help="The fixed amount or the percentage value, interpreted "
-             "according to writeoff_amount_type. Ignored for 'residual'.",
+        "according to writeoff_amount_type. Ignored for 'residual'.",
     )
 
     # ---- match boost ----
@@ -138,7 +142,8 @@ class EhReconciliationRule(models.Model):
         help="Optional. When set, the rule only suggests AMLs for this partner.",
     )
     score_boost = fields.Float(
-        default=0.5, digits=(3, 2),
+        default=0.5,
+        digits=(3, 2),
         help="Confidence boost added to the suggestion score when this rule fires (range 0.0 to 1.0).",
     )
     auto_confirm = fields.Boolean(
@@ -149,7 +154,8 @@ class EhReconciliationRule(models.Model):
     # ---- audit ----
 
     fire_count = fields.Integer(
-        default=0, readonly=True,
+        default=0,
+        readonly=True,
         help="Total number of times this rule has fired across all sessions.",
     )
     last_fired_at = fields.Datetime(readonly=True)
@@ -173,35 +179,42 @@ class EhReconciliationRule(models.Model):
     def _check_code_format(self):
         for rec in self:
             if not _CODE_RE.match(rec.code or ''):
-                raise ValidationError(_(
-                    "Rule code must match [a-z][a-z0-9_]* (got %r).",
-                ) % rec.code)
+                raise ValidationError(
+                    _(
+                        "Rule code must match [a-z][a-z0-9_]* (got %r).",
+                    )
+                    % rec.code
+                )
 
     @api.constrains('rule_type', 'writeoff_account_id', 'active')
     def _check_writeoff_target(self):
         for rec in self:
             if rec.active and rec.rule_type == 'write_off' and not rec.writeoff_account_id:
-                raise ValidationError(_(
-                    "Active write-off rules require a writeoff_account_id.",
-                ))
+                raise ValidationError(
+                    _(
+                        "Active write-off rules require a writeoff_account_id.",
+                    )
+                )
 
-    @api.constrains('writeoff_amount_type', 'writeoff_amount', 'active',
-                    'rule_type')
+    @api.constrains('writeoff_amount_type', 'writeoff_amount', 'active', 'rule_type')
     def _check_writeoff_amount(self):
         for rec in self:
             if not (rec.active and rec.rule_type == 'write_off'):
                 continue
-            if rec.writeoff_amount_type in ('fixed', 'percentage') and (
-                    rec.writeoff_amount <= 0):
-                raise ValidationError(_(
-                    "A %(t)s write-off requires a positive writeoff_amount.",
-                    t=rec.writeoff_amount_type,
-                ))
-            if rec.writeoff_amount_type == 'percentage' and (
-                    rec.writeoff_amount > 100):
-                raise ValidationError(_(
-                    "A percentage write-off cannot exceed 100 (got %s).",
-                ) % rec.writeoff_amount)
+            if rec.writeoff_amount_type in ('fixed', 'percentage') and (rec.writeoff_amount <= 0):
+                raise ValidationError(
+                    _(
+                        "A %(t)s write-off requires a positive writeoff_amount.",
+                        t=rec.writeoff_amount_type,
+                    )
+                )
+            if rec.writeoff_amount_type == 'percentage' and (rec.writeoff_amount > 100):
+                raise ValidationError(
+                    _(
+                        "A percentage write-off cannot exceed 100 (got %s).",
+                    )
+                    % rec.writeoff_amount
+                )
 
     @api.constrains('payment_ref_regex', 'narration_regex')
     def _check_regex(self):
@@ -215,10 +228,13 @@ class EhReconciliationRule(models.Model):
                 try:
                     re.compile(value)
                 except re.error as exc:
-                    raise ValidationError(_(
-                        "%(label)s is not a valid Python regex: %(err)s",
-                        label=label, err=str(exc),
-                    ))
+                    raise ValidationError(
+                        _(
+                            "%(label)s is not a valid Python regex: %(err)s",
+                            label=label,
+                            err=str(exc),
+                        )
+                    )
 
     # ---- evaluation ----
 
@@ -269,15 +285,13 @@ class EhReconciliationRule(models.Model):
         self.ensure_one()
         base = abs(statement_line.amount or 0.0)
         if self.writeoff_amount_type == 'fixed':
-            return min(self.writeoff_amount, base) if base else \
-                self.writeoff_amount
+            return min(self.writeoff_amount, base) if base else self.writeoff_amount
         if self.writeoff_amount_type == 'percentage':
             return round(base * (self.writeoff_amount / 100.0), 2)
         return base
 
     @api.model
-    def learn_from_history(self, min_support=3, min_purity=0.8,
-                           history_limit=2000):
+    def learn_from_history(self, min_support=3, min_purity=0.8, history_limit=2000):
         """Create match rules from recurring reconciliation patterns.
 
         Clean-room frequency learning: scan past 'match' audit rows and,
@@ -290,12 +304,14 @@ class EhReconciliationRule(models.Model):
         already exists is skipped. Returns the rules created this run.
         """
         from collections import defaultdict
+
         engine = self.env['eh.reconciliation.suggestion.engine']
         company = self.env.company
         audits = self.env['eh.reconciliation.audit'].search(
-            [('decision', '=', 'match'), ('aml_id', '!=', False),
-             ('statement_line_id', '!=', False)],
-            order='id desc', limit=history_limit)
+            [('decision', '=', 'match'), ('aml_id', '!=', False), ('statement_line_id', '!=', False)],
+            order='id desc',
+            limit=history_limit,
+        )
 
         token_partner = defaultdict(lambda: defaultdict(int))
         token_total = defaultdict(int)
@@ -307,11 +323,13 @@ class EhReconciliationRule(models.Model):
             partner = aml.partner_id or line.partner_id
             if not partner:
                 continue
-            tokens = engine._tokenize(engine._gather_text(
-                getattr(line, 'payment_ref', None),
-                getattr(line, 'ref', None),
-                getattr(line, 'narration', None),
-            ))
+            tokens = engine._tokenize(
+                engine._gather_text(
+                    getattr(line, 'payment_ref', None),
+                    getattr(line, 'ref', None),
+                    getattr(line, 'narration', None),
+                )
+            )
             for token in tokens:
                 token_partner[token][partner.id] += 1
                 token_total[token] += 1
@@ -324,21 +342,21 @@ class EhReconciliationRule(models.Model):
             if support < min_support or (support / total) < min_purity:
                 continue
             code = 'learned_%s' % token
-            if self.search([('code', '=', code),
-                            ('company_id', '=', company.id)], limit=1):
+            if self.search([('code', '=', code), ('company_id', '=', company.id)], limit=1):
                 continue
-            created |= self.create({
-                'name': "Learned: %s" % token,
-                'code': code,
-                'rule_type': 'match',
-                'partner_id': best_partner,
-                'payment_ref_regex': r'(?i)\b%s\b' % re.escape(token),
-                'score_boost': 0.5,
-                'auto_confirm': False,
-                'notes': "Auto-learned from %d historical matches "
-                         "(%.0f%% to this partner)." % (
-                             support, 100.0 * support / total),
-            })
+            created |= self.create(
+                {
+                    'name': "Learned: %s" % token,
+                    'code': code,
+                    'rule_type': 'match',
+                    'partner_id': best_partner,
+                    'payment_ref_regex': r'(?i)\b%s\b' % re.escape(token),
+                    'score_boost': 0.5,
+                    'auto_confirm': False,
+                    'notes': "Auto-learned from %d historical matches "
+                    "(%.0f%% to this partner)." % (support, 100.0 * support / total),
+                }
+            )
         return created
 
     def record_fire(self):
@@ -352,12 +370,15 @@ class EhReconciliationRule(models.Model):
         if not self:
             return
         from odoo.tools import SQL
+
         self.flush_recordset(['fire_count'])
-        self.env.cr.execute(SQL(
-            "UPDATE eh_reconciliation_rule "
-            "SET fire_count = fire_count + 1, "
-            "    last_fired_at = NOW() AT TIME ZONE 'UTC' "
-            "WHERE id IN %s",
-            tuple(self.ids),
-        ))
+        self.env.cr.execute(
+            SQL(
+                "UPDATE eh_reconciliation_rule "
+                "SET fire_count = fire_count + 1, "
+                "    last_fired_at = NOW() AT TIME ZONE 'UTC' "
+                "WHERE id IN %s",
+                tuple(self.ids),
+            )
+        )
         self.invalidate_recordset(['fire_count', 'last_fired_at'])

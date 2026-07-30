@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -32,7 +31,6 @@ from datetime import timedelta
 
 from odoo import api, fields, models
 
-
 _TOKEN_RE = re.compile(r'\w+', re.UNICODE)
 _MIN_TOKEN_LEN = 3
 
@@ -64,8 +62,7 @@ class EhSuggestionEngine(models.AbstractModel):
     # ---- public api ----
 
     @api.model
-    def find_suggestions(self, statement_line, limit=None, threshold=None,
-                         candidate_amls=None):
+    def find_suggestions(self, statement_line, limit=None, threshold=None, candidate_amls=None):
         """Return scored suggestions for a statement line.
 
         :param statement_line: account.bank.statement.line record.
@@ -78,9 +75,7 @@ class EhSuggestionEngine(models.AbstractModel):
             rules_fired. Sorted by score descending.
         """
         limit = limit if limit is not None else self.DEFAULT_LIMIT
-        threshold = (
-            threshold if threshold is not None else self.DEFAULT_THRESHOLD
-        )
+        threshold = threshold if threshold is not None else self.DEFAULT_THRESHOLD
         if candidate_amls is None:
             candidate_amls = self._fetch_candidates(statement_line)
 
@@ -88,14 +83,14 @@ class EhSuggestionEngine(models.AbstractModel):
         for aml in candidate_amls:
             score = self.score_match(statement_line, aml)
             if score['total'] >= threshold:
-                scored.append({
-                    'aml_id': aml.id,
-                    'score': round(score['total'], 4),
-                    'breakdown': {
-                        k: round(v, 4) for k, v in score['breakdown'].items()
-                    },
-                    'rules_fired': score['rules_fired'],
-                })
+                scored.append(
+                    {
+                        'aml_id': aml.id,
+                        'score': round(score['total'], 4),
+                        'breakdown': {k: round(v, 4) for k, v in score['breakdown'].items()},
+                        'rules_fired': score['rules_fired'],
+                    }
+                )
         scored.sort(key=lambda x: x['score'], reverse=True)
         return scored[:limit]
 
@@ -146,11 +141,14 @@ class EhSuggestionEngine(models.AbstractModel):
         even fetched.
         """
         Rule = self.env['eh.reconciliation.rule']
-        rules = Rule.search([
-            ('active', '=', True),
-            ('rule_type', '=', 'match'),
-            ('company_id', '=', statement_line.company_id.id),
-        ], order='sequence, id')
+        rules = Rule.search(
+            [
+                ('active', '=', True),
+                ('rule_type', '=', 'match'),
+                ('company_id', '=', statement_line.company_id.id),
+            ],
+            order='sequence, id',
+        )
         boost = 0.0
         codes = []
         for rule in rules:
@@ -175,15 +173,21 @@ class EhSuggestionEngine(models.AbstractModel):
         company_id = statement_line.company_id.id
         domain = [
             ('company_id', '=', company_id),
-            ('account_id.account_type', 'in', (
-                'asset_receivable', 'liability_payable',
-            )),
+            (
+                'account_id.account_type',
+                'in',
+                (
+                    'asset_receivable',
+                    'liability_payable',
+                ),
+            ),
             ('amount_residual', '!=', 0),
             ('parent_state', '=', 'posted'),
             ('reconciled', '=', False),
         ]
         return self.env['account.move.line'].search(
-            domain, limit=self.CANDIDATE_FETCH_LIMIT,
+            domain,
+            limit=self.CANDIDATE_FETCH_LIMIT,
         )
 
     # ---- individual heuristics ----
@@ -287,12 +291,14 @@ class EhSuggestionEngine(models.AbstractModel):
             return 0.0
         ninety_days_ago = fields.Date.context_today(self) - timedelta(days=90)
         company_ids = self.env.companies.ids
-        recent_count = self.env['eh.reconciliation.audit'].search_count([
-            ('aml_id.partner_id', '=', partner.id),
-            ('decision', '=', 'match'),
-            ('decided_at', '>=', ninety_days_ago),
-            ('aml_id.company_id', 'in', company_ids),
-        ])
+        recent_count = self.env['eh.reconciliation.audit'].search_count(
+            [
+                ('aml_id.partner_id', '=', partner.id),
+                ('decision', '=', 'match'),
+                ('decided_at', '>=', ninety_days_ago),
+                ('aml_id.company_id', 'in', company_ids),
+            ]
+        )
         if recent_count >= 5:
             return 1.0
         if recent_count >= 2:
@@ -304,8 +310,7 @@ class EhSuggestionEngine(models.AbstractModel):
     # ---- counterpart prediction ----
 
     @api.model
-    def predict_counterpart(self, statement_line, history_limit=500,
-                            min_overlap=0.0):
+    def predict_counterpart(self, statement_line, history_limit=500, min_overlap=0.0):
         """Predict the most likely counterpart account and partner for a
         statement line from reconciliation history.
 
@@ -318,18 +323,22 @@ class EhSuggestionEngine(models.AbstractModel):
         history overlaps. The score is the winner's share of total weight.
         """
         from collections import defaultdict
-        tokens = self._tokenize(self._gather_text(
-            getattr(statement_line, 'payment_ref', None),
-            getattr(statement_line, 'ref', None),
-            getattr(statement_line, 'narration', None),
-        ))
+
+        tokens = self._tokenize(
+            self._gather_text(
+                getattr(statement_line, 'payment_ref', None),
+                getattr(statement_line, 'ref', None),
+                getattr(statement_line, 'narration', None),
+            )
+        )
         if not tokens:
             return {}
         company = statement_line.company_id
         audits = self.env['eh.reconciliation.audit'].search(
-            [('decision', '=', 'match'), ('aml_id', '!=', False),
-             ('statement_line_id', '!=', False)],
-            order='id desc', limit=history_limit)
+            [('decision', '=', 'match'), ('aml_id', '!=', False), ('statement_line_id', '!=', False)],
+            order='id desc',
+            limit=history_limit,
+        )
 
         account_weight = defaultdict(float)
         account_support = defaultdict(int)
@@ -342,11 +351,13 @@ class EhSuggestionEngine(models.AbstractModel):
             aml = audit.aml_id
             if not past or not aml or aml.company_id != company:
                 continue
-            past_tokens = self._tokenize(self._gather_text(
-                getattr(past, 'payment_ref', None),
-                getattr(past, 'ref', None),
-                getattr(past, 'narration', None),
-            ))
+            past_tokens = self._tokenize(
+                self._gather_text(
+                    getattr(past, 'payment_ref', None),
+                    getattr(past, 'ref', None),
+                    getattr(past, 'narration', None),
+                )
+            )
             if not past_tokens:
                 continue
             union = tokens | past_tokens
@@ -367,16 +378,12 @@ class EhSuggestionEngine(models.AbstractModel):
         if account_weight:
             best = max(account_weight, key=account_weight.get)
             result['account_id'] = best
-            result['account_score'] = round(
-                account_weight[best] / account_total, 3) if account_total \
-                else 0.0
+            result['account_score'] = round(account_weight[best] / account_total, 3) if account_total else 0.0
             result['account_support'] = account_support[best]
         if partner_weight:
             best = max(partner_weight, key=partner_weight.get)
             result['partner_id'] = best
-            result['partner_score'] = round(
-                partner_weight[best] / partner_total, 3) if partner_total \
-                else 0.0
+            result['partner_score'] = round(partner_weight[best] / partner_total, 3) if partner_total else 0.0
             result['partner_support'] = partner_support[best]
         return result
 
@@ -391,7 +398,4 @@ class EhSuggestionEngine(models.AbstractModel):
     def _tokenize(text):
         if not text:
             return set()
-        return {
-            t for t in _TOKEN_RE.findall(text)
-            if len(t) >= _MIN_TOKEN_LEN
-        }
+        return {t for t in _TOKEN_RE.findall(text) if len(t) >= _MIN_TOKEN_LEN}

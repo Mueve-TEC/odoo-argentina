@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -20,34 +19,35 @@ Covers:
 
 import json
 
-from odoo.tests import tagged
-
 from odoo.addons.eh_account_base.models.report_execution import (
     EhAccountReportExecution,
 )
+from odoo.tests import tagged
+
 from .common import EhAccountUnitTestCase
 
 
 @tagged('eh_account_base', 'unit')
 class TestOptionsCanonicalisation(EhAccountUnitTestCase):
-
     def test_dict_keys_sorted(self):
         a = EhAccountReportExecution._canonicalise_options({'b': 1, 'a': 2})
         b = EhAccountReportExecution._canonicalise_options({'a': 2, 'b': 1})
-        self.assertEqual(json.dumps(a, sort_keys=True),
-                         json.dumps(b, sort_keys=True))
+        self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))
 
     def test_nested_dict_canonicalised(self):
-        a = EhAccountReportExecution._canonicalise_options({
-            'filters': {'b': 1, 'a': 2},
-            'meta': {'y': 'z', 'x': 'w'},
-        })
-        b = EhAccountReportExecution._canonicalise_options({
-            'meta': {'x': 'w', 'y': 'z'},
-            'filters': {'a': 2, 'b': 1},
-        })
-        self.assertEqual(json.dumps(a, sort_keys=True),
-                         json.dumps(b, sort_keys=True))
+        a = EhAccountReportExecution._canonicalise_options(
+            {
+                'filters': {'b': 1, 'a': 2},
+                'meta': {'y': 'z', 'x': 'w'},
+            }
+        )
+        b = EhAccountReportExecution._canonicalise_options(
+            {
+                'meta': {'x': 'w', 'y': 'z'},
+                'filters': {'a': 2, 'b': 1},
+            }
+        )
+        self.assertEqual(json.dumps(a, sort_keys=True), json.dumps(b, sort_keys=True))
 
     def test_list_order_preserved(self):
         # Lists may carry meaningful order; do not sort them.
@@ -61,7 +61,8 @@ class TestOptionsCanonicalisation(EhAccountUnitTestCase):
     def test_scalar_passthrough(self):
         for value in (1, 1.5, 'hello', True, False, None):
             self.assertEqual(
-                EhAccountReportExecution._canonicalise_options(value), value,
+                EhAccountReportExecution._canonicalise_options(value),
+                value,
             )
 
     def test_hash_is_stable_across_dict_orderings(self):
@@ -88,7 +89,6 @@ class TestOptionsCanonicalisation(EhAccountUnitTestCase):
 
 @tagged('eh_account_base', 'integration')
 class TestReportExecutionLifecycle(EhAccountUnitTestCase):
-
     def setUp(self):
         super().setUp()
         self.Execution = self.env['eh.account.report.execution']
@@ -242,19 +242,23 @@ class TestReportExecutionLifecycle(EhAccountUnitTestCase):
         """
         with self.env.cr.savepoint():
             try:
-                company2 = self.env['res.company'].with_context(
-                    default_group_rfq='default',
-                ).create({
-                    'name': 'Cache Scope Test Co 2',
-                })
+                company2 = (
+                    self.env['res.company']
+                    .with_context(
+                        default_group_rfq='default',
+                    )
+                    .create(
+                        {
+                            'name': 'Cache Scope Test Co 2',
+                        }
+                    )
+                )
             except Exception as exc:
                 # Stock + Enterprise interaction occasionally strips
                 # not-null defaults on per-company auto-records
                 # (warehouse picking types). When that happens the
                 # test environment cannot produce a second company.
-                self.skipTest(
-                    f"environment cannot create a second company: {exc}"
-                )
+                self.skipTest(f"environment cannot create a second company: {exc}")
                 return
         options = {'date': '2026-05-31'}
         # Cache an execution scoped to a single company.

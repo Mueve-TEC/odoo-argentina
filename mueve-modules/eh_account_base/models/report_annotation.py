@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -27,16 +26,17 @@ class EhAccountReportAnnotation(models.Model):
 
     report_code = fields.Char(required=True, index=True)
     line_id = fields.Char(
-        required=True, index=True,
-        help="Id of the report line the note attaches to "
-             "(e.g. 'account-5', 'net_profit').",
+        required=True,
+        index=True,
+        help="Id of the report line the note attaches to " "(e.g. 'account-5', 'net_profit').",
     )
     expression_label = fields.Char(
-        help="Column label to pin the note to a single cell; empty "
-             "annotates the whole row.",
+        help="Column label to pin the note to a single cell; empty " "annotates the whole row.",
     )
     text = fields.Text(required=True)
     company_id = fields.Many2one(
-        'res.company', required=True, index=True,
+        'res.company',
+        required=True,
+        index=True,
         default=lambda self: self.env.company,
     )

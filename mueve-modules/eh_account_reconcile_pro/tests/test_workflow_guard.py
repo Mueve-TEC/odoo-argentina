@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -24,22 +23,23 @@ from .common import EhReconcileIntegrationTestCase
 
 @tagged('eh_account_reconcile_pro', 'post_install', '-at_install')
 class TestWorkflowGuard(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.session = cls.env['eh.reconciliation.session'].open_or_create(
-            cls.bank_journal.id)
+        cls.session = cls.env['eh.reconciliation.session'].open_or_create(cls.bank_journal.id)
         try:
-            cls.user = cls.env['res.users'].create({
-                'name': 'Guard Manager',
-                'login': 'eh_reconcile_guard_manager',
-                'company_id': cls.company.id,
-                'company_ids': [(6, 0, cls.company.ids)],
-                'group_ids': [(4, cls.env.ref('base.group_user').id),
-                              (4, cls.env.ref(
-                                  'eh_account_base.group_eh_manager').id)],
-            })
+            cls.user = cls.env['res.users'].create(
+                {
+                    'name': 'Guard Manager',
+                    'login': 'eh_reconcile_guard_manager',
+                    'company_id': cls.company.id,
+                    'company_ids': [(6, 0, cls.company.ids)],
+                    'group_ids': [
+                        (4, cls.env.ref('base.group_user').id),
+                        (4, cls.env.ref('eh_account_base.group_eh_manager').id),
+                    ],
+                }
+            )
         except Exception:  # noqa: BLE001
             cls.user = False
 

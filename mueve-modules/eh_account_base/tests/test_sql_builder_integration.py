@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -13,31 +12,36 @@ but also semantically correct, by comparing aggregated results against ORM
 read_group results on the same fixture data.
 """
 
+from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
 from odoo.tests import tagged
 
-from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
 from .common import EhAccountIntegrationTestCase
 
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestMoveLineQueryExecution(EhAccountIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         # Seed three balanced entries with different account / partner mixes.
-        cls.move_a = cls.post_balanced_move([
-            {'account': cls.account_revenue, 'credit': 100.0, 'partner': cls.partner_a},
-            {'account': cls.account_cash, 'debit': 100.0},
-        ])
-        cls.move_b = cls.post_balanced_move([
-            {'account': cls.account_revenue, 'credit': 200.0, 'partner': cls.partner_b},
-            {'account': cls.account_cash, 'debit': 200.0},
-        ])
-        cls.move_c = cls.post_balanced_move([
-            {'account': cls.account_expense, 'debit': 50.0, 'partner': cls.partner_a},
-            {'account': cls.account_cash, 'credit': 50.0},
-        ])
+        cls.move_a = cls.post_balanced_move(
+            [
+                {'account': cls.account_revenue, 'credit': 100.0, 'partner': cls.partner_a},
+                {'account': cls.account_cash, 'debit': 100.0},
+            ]
+        )
+        cls.move_b = cls.post_balanced_move(
+            [
+                {'account': cls.account_revenue, 'credit': 200.0, 'partner': cls.partner_b},
+                {'account': cls.account_cash, 'debit': 200.0},
+            ]
+        )
+        cls.move_c = cls.post_balanced_move(
+            [
+                {'account': cls.account_expense, 'debit': 50.0, 'partner': cls.partner_a},
+                {'account': cls.account_cash, 'credit': 50.0},
+            ]
+        )
 
     def test_sum_balance_revenue_only(self):
         rows = (

@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -28,7 +27,6 @@ from .common import EhReconcileIntegrationTestCase
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestAmountScore(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -69,7 +67,6 @@ class TestAmountScore(EhReconcileIntegrationTestCase):
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestDateScore(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -99,7 +96,6 @@ class TestDateScore(EhReconcileIntegrationTestCase):
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestPartnerScore(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -123,10 +119,12 @@ class TestPartnerScore(EhReconcileIntegrationTestCase):
     def test_no_aml_partner_scores_zero(self):
         sl = self.make_statement_line(amount=100, partner=self.partner_a)
         # Create an AML with no partner set.
-        move = self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 100.0},
-            {'account': self.account_receivable, 'debit': 100.0},
-        ])
+        move = self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 100.0},
+                {'account': self.account_receivable, 'debit': 100.0},
+            ]
+        )
         aml = move.line_ids.filtered(
             lambda l: l.account_id == self.account_receivable,
         )
@@ -135,7 +133,6 @@ class TestPartnerScore(EhReconcileIntegrationTestCase):
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestReferenceScore(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -143,40 +140,48 @@ class TestReferenceScore(EhReconcileIntegrationTestCase):
 
     def test_full_token_overlap_scores_high(self):
         sl = self.make_statement_line(
-            amount=100, partner=self.partner_a,
+            amount=100,
+            partner=self.partner_a,
             payment_ref='INV-2026-0042 partner alpha',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100, ref='INV-2026-0042',
+            self.partner_a,
+            100,
+            ref='INV-2026-0042',
         )
         score = self.engine._score_reference(sl, aml)
         self.assertGreater(score, 0.0)
 
     def test_no_overlap_scores_zero(self):
         sl = self.make_statement_line(
-            amount=100, partner=self.partner_a,
+            amount=100,
+            partner=self.partner_a,
             payment_ref='unrelated memo content',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100, ref='completely different identifier',
+            self.partner_a,
+            100,
+            ref='completely different identifier',
         )
         self.assertEqual(self.engine._score_reference(sl, aml), 0.0)
 
     def test_short_tokens_ignored(self):
         # Tokens shorter than 3 chars are filtered as too generic.
         sl = self.make_statement_line(
-            amount=100, partner=self.partner_a,
+            amount=100,
+            partner=self.partner_a,
             payment_ref='a b c',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100, ref='a b c',
+            self.partner_a,
+            100,
+            ref='a b c',
         )
         self.assertEqual(self.engine._score_reference(sl, aml), 0.0)
 
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestCombinedScore(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -185,11 +190,16 @@ class TestCombinedScore(EhReconcileIntegrationTestCase):
     def test_all_signals_high_yields_total_near_one(self):
         date = fields.Date.from_string('2026-06-15')
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a, date=date,
+            amount=100.0,
+            partner=self.partner_a,
+            date=date,
             payment_ref='INV-2026-0042',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100.0, date=date, ref='INV-2026-0042',
+            self.partner_a,
+            100.0,
+            date=date,
+            ref='INV-2026-0042',
         )
         score = self.engine.score_match(sl, aml)
         # Amount 1.0 * 0.40 + Date 1.0 * 0.20 + Partner 1.0 * 0.25
@@ -203,12 +213,14 @@ class TestCombinedScore(EhReconcileIntegrationTestCase):
     def test_only_amount_match_scores_low(self):
         # Different partner, far date, no ref overlap. Only amount fires.
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a,
+            amount=100.0,
+            partner=self.partner_a,
             date=fields.Date.from_string('2026-06-15'),
             payment_ref='unrelated',
         )
         aml = self.make_open_invoice_line(
-            self.partner_b, 100.0,
+            self.partner_b,
+            100.0,
             date=fields.Date.from_string('2026-01-01'),
             ref='completely-different',
         )
@@ -220,7 +232,6 @@ class TestCombinedScore(EhReconcileIntegrationTestCase):
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestFindSuggestions(EhReconcileIntegrationTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -230,16 +241,22 @@ class TestFindSuggestions(EhReconcileIntegrationTestCase):
         date = fields.Date.from_string('2026-06-15')
         # One strong candidate (same partner, same date, exact amount).
         strong_aml = self.make_open_invoice_line(
-            self.partner_a, 250.0, date=date, ref='INV-STRONG',
+            self.partner_a,
+            250.0,
+            date=date,
+            ref='INV-STRONG',
         )
         # One weak candidate (different partner, far date, different ref).
         self.make_open_invoice_line(
-            self.partner_b, 250.0,
+            self.partner_b,
+            250.0,
             date=fields.Date.from_string('2026-02-01'),
             ref='INV-WEAK',
         )
         sl = self.make_statement_line(
-            amount=250.0, partner=self.partner_a, date=date,
+            amount=250.0,
+            partner=self.partner_a,
+            date=date,
             payment_ref='INV-STRONG',
         )
         results = self.engine.find_suggestions(sl, limit=10)
@@ -253,12 +270,14 @@ class TestFindSuggestions(EhReconcileIntegrationTestCase):
         # All candidates are weak; with a high threshold, none survive.
         for _i in range(3):
             self.make_open_invoice_line(
-                self.partner_b, 999.0,
+                self.partner_b,
+                999.0,
                 date=fields.Date.from_string('2026-01-01'),
                 ref='unrelated',
             )
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a,
+            amount=100.0,
+            partner=self.partner_a,
             date=fields.Date.from_string('2026-06-15'),
             payment_ref='match this',
         )
@@ -269,10 +288,15 @@ class TestFindSuggestions(EhReconcileIntegrationTestCase):
         date = fields.Date.from_string('2026-06-15')
         for _i in range(8):
             self.make_open_invoice_line(
-                self.partner_a, 100.0, date=date, ref='INV-MATCH',
+                self.partner_a,
+                100.0,
+                date=date,
+                ref='INV-MATCH',
             )
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a, date=date,
+            amount=100.0,
+            partner=self.partner_a,
+            date=date,
             payment_ref='INV-MATCH',
         )
         results = self.engine.find_suggestions(sl, limit=3)

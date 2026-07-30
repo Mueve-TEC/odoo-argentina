@@ -7,4 +7,3 @@ name: ADHOC Account Invoicing
 odoo_version: 19.0
 pre_commit_ignore: []
 slug: ''
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -23,6 +22,7 @@ implementation so the rendered SQL and parameter order are identical.
 This module is only ever imported by the 16 backport; on 17/18/19 the suite
 uses the framework's own SQL class.
 """
+
 from __future__ import annotations
 
 import re
@@ -79,8 +79,7 @@ class SQL:
         return bool(self._code)
 
     def __eq__(self, other):
-        return (isinstance(other, SQL)
-                and self.code == other.code and self.params == other.params)
+        return isinstance(other, SQL) and self.code == other.code and self.params == other.params
 
     def __hash__(self):
         return hash((self.code, tuple(self.params)))
@@ -94,8 +93,7 @@ class SQL:
         if len(args) == 0:
             return SQL()
         if len(args) == 1:
-            return SQL("%s", args[0]) if not isinstance(args[0], SQL) \
-                else args[0]
+            return SQL("%s", args[0]) if not isinstance(args[0], SQL) else args[0]
         if not self._args:
             return SQL(self._code.join("%s" for _ in args), *args)
         items = [self] * (len(args) * 2 - 1)
@@ -105,10 +103,8 @@ class SQL:
 
     @classmethod
     def identifier(cls, name, subname=None):
-        assert name.isidentifier() or IDENT_RE.match(name), \
-            "%r invalid for SQL.identifier()" % name
+        assert name.isidentifier() or IDENT_RE.match(name), "%r invalid for SQL.identifier()" % name
         if subname is None:
             return cls('"%s"' % name)
-        assert subname.isidentifier() or IDENT_RE.match(subname), \
-            "%r invalid for SQL.identifier()" % subname
+        assert subname.isidentifier() or IDENT_RE.match(subname), "%r invalid for SQL.identifier()" % subname
         return cls('"%s"."%s"' % (name, subname))

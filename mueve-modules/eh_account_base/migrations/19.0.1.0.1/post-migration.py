@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -45,8 +44,7 @@ def migrate(cr, version):
     )
     if cr.rowcount < 2:
         _logger.warning(
-            "eh_account_base 19.0.1.0.1 migration: new groups not yet "
-            "loaded, skipping promotion. Re-run upgrade.",
+            "eh_account_base 19.0.1.0.1 migration: new groups not yet " "loaded, skipping promotion. Re-run upgrade.",
         )
         return
 
@@ -95,7 +93,7 @@ def migrate(cr, version):
     manager_promoted = cr.rowcount
 
     _logger.info(
-        "eh_account_base 19.0.1.0.1: promoted %d users to "
-        "group_eh_user and %d users to group_eh_manager.",
-        user_promoted, manager_promoted,
+        "eh_account_base 19.0.1.0.1: promoted %d users to " "group_eh_user and %d users to group_eh_manager.",
+        user_promoted,
+        manager_promoted,
     )

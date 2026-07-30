@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -51,10 +50,12 @@ from urllib.request import getproxies, proxy_bypass
 # link-local literal. GCP's resolves to 169.254.169.254 (already blocked by
 # the IP check once resolved) but is listed so a resolver override or hosts
 # entry cannot slip it past.
-_METADATA_HOSTNAMES = frozenset({
-    'metadata.google.internal',
-    'metadata',
-})
+_METADATA_HOSTNAMES = frozenset(
+    {
+        'metadata.google.internal',
+        'metadata',
+    }
+)
 
 
 class UnsafeUrlError(ValueError):
@@ -141,13 +142,13 @@ def assert_safe_url(url, *, allow_loopback=False, allow_private=False):
     if parsed.scheme not in ('http', 'https'):
         raise UnsafeUrlError(
             "URL scheme %r is not allowed; only http and https may be "
-            "fetched by the server." % (parsed.scheme or '',))
+            "fetched by the server." % (parsed.scheme or '',)
+        )
     host = parsed.hostname
     if not host:
         raise UnsafeUrlError("URL has no host.")
     if host.lower() in _METADATA_HOSTNAMES:
-        raise UnsafeUrlError(
-            "URL host %r targets the cloud metadata service." % host)
+        raise UnsafeUrlError("URL host %r targets the cloud metadata service." % host)
 
     # A numeric IP literal is judged directly - no DNS, and it must be checked
     # whether or not egress is proxied (a proxy would still forward a request
@@ -156,20 +157,15 @@ def assert_safe_url(url, *, allow_loopback=False, allow_private=False):
     if literal_ip is not None:
         if literal_ip.version == 6 and literal_ip.ipv4_mapped:
             literal_ip = literal_ip.ipv4_mapped
-        reason = _addr_forbidden(
-            literal_ip, allow_loopback=allow_loopback,
-            allow_private=allow_private)
+        reason = _addr_forbidden(literal_ip, allow_loopback=allow_loopback, allow_private=allow_private)
         if reason:
-            raise UnsafeUrlError(
-                "URL host %r is %s, which the server refuses to fetch."
-                % (host, reason))
+            raise UnsafeUrlError("URL host %r is %s, which the server refuses to fetch." % (host, reason))
         return parsed
 
     # Resolve the name to every address it maps to and validate them all, so
     # a hostname that resolves to an internal address is rejected too.
     try:
-        infos = socket.getaddrinfo(host, parsed.port or None,
-                                   proto=socket.IPPROTO_TCP)
+        infos = socket.getaddrinfo(host, parsed.port or None, proto=socket.IPPROTO_TCP)
     except socket.gaierror as exc:
         # Local resolution failed. When Odoo egresses through a proxy the proxy
         # (not this host) resolves the name, so a local lookup failure is not
@@ -181,8 +177,7 @@ def assert_safe_url(url, *, allow_loopback=False, allow_private=False):
         # unresolvable name stays refused exactly as before.
         if _proxy_in_effect(parsed.scheme, host):
             return parsed
-        raise UnsafeUrlError(
-            "URL host %r could not be resolved: %s" % (host, exc)) from exc
+        raise UnsafeUrlError("URL host %r could not be resolved: %s" % (host, exc)) from exc
 
     seen = set()
     for info in infos:
@@ -193,17 +188,14 @@ def assert_safe_url(url, *, allow_loopback=False, allow_private=False):
         try:
             ip = ipaddress.ip_address(addr)
         except ValueError:
-            raise UnsafeUrlError(
-                "URL host %r resolved to an unparseable address %r."
-                % (host, addr))
+            raise UnsafeUrlError("URL host %r resolved to an unparseable address %r." % (host, addr))
         # Unwrap IPv4-mapped IPv6 (::ffff:10.0.0.1) so the mapped v4 address
         # is judged on its own merits rather than as a routable v6 address.
         if ip.version == 6 and ip.ipv4_mapped:
             ip = ip.ipv4_mapped
-        reason = _addr_forbidden(
-            ip, allow_loopback=allow_loopback, allow_private=allow_private)
+        reason = _addr_forbidden(ip, allow_loopback=allow_loopback, allow_private=allow_private)
         if reason:
             raise UnsafeUrlError(
-                "URL host %r resolves to %s (%s), which the server refuses "
-                "to fetch." % (host, addr, reason))
+                "URL host %r resolves to %s (%s), which the server refuses " "to fetch." % (host, addr, reason)
+            )
     return parsed

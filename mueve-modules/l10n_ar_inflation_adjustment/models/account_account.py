@@ -15,8 +15,8 @@ class AccountAccount(models.Model):
         compute='_compute_inflation_adjustable',
         store=True,
         help='Indica si la cuenta es ajustable por inflación. '
-             'Se determina automáticamente según el tag "No Monetaria" '
-             'asignado a la cuenta.'
+        'Se determina automáticamente según el tag "No Monetaria" '
+        'asignado a la cuenta.',
     )
 
     # Tipos de cuenta que por defecto son no monetarias (ajustables por inflación)
@@ -37,18 +37,12 @@ class AccountAccount(models.Model):
         Busca primero el tag propio del módulo, luego el de l10n_ar_ux por compatibilidad.
         """
         # Primero intentar con el tag propio de este módulo
-        tag = self.env.ref(
-            'l10n_ar_inflation_adjustment.non_monetary_account_tag',
-            raise_if_not_found=False
-        )
+        tag = self.env.ref('l10n_ar_inflation_adjustment.non_monetary_account_tag', raise_if_not_found=False)
         if tag:
             return tag
-        
+
         # Fallback al tag de l10n_ar_ux si existe (para compatibilidad)
-        tag = self.env.ref(
-            'l10n_ar_ux.no_monetaria_tag',
-            raise_if_not_found=False
-        )
+        tag = self.env.ref('l10n_ar_ux.no_monetaria_tag', raise_if_not_found=False)
         return tag
 
     @api.depends('tag_ids')
@@ -56,13 +50,13 @@ class AccountAccount(models.Model):
         """
         Calcula si la cuenta es ajustable por inflación basándose en
         si tiene el tag "No Monetaria".
-        
+
         Según la RT 6 y RT 17, las cuentas no monetarias son las que
         deben ajustarse por inflación (activos fijos, inventarios,
         patrimonio neto, resultados, etc.).
         """
         non_monetary_tag = self._get_non_monetary_tag()
-        
+
         for account in self:
             if non_monetary_tag:
                 account.inflation_adjustable = non_monetary_tag.id in account.tag_ids.ids
@@ -75,37 +69,39 @@ class AccountAccount(models.Model):
         """
         Asigna el tag "No Monetaria" a las cuentas correspondientes
         según su tipo de cuenta.
-        
+
         Este método puede ejecutarse manualmente o mediante una acción
         planificada para mantener actualizadas las cuentas.
-        
+
         :param company: Compañía(s) para las cuales asignar el tag.
                        Si no se especifica, usa la compañía actual.
         """
         if company is None:
             company = self.env.company
-        
+
         non_monetary_tag = self._get_non_monetary_tag()
         if not non_monetary_tag:
             return False
-        
+
         # Buscar cuentas que deberían tener el tag pero no lo tienen
-        accounts = self.search([
-            ('account_type', 'in', self.NON_MONETARY_ACCOUNT_TYPES),
-            ('company_ids', 'in', company.ids if hasattr(company, 'ids') else [company.id]),
-            ('tag_ids', 'not in', [non_monetary_tag.id]),
-        ])
-        
+        accounts = self.search(
+            [
+                ('account_type', 'in', self.NON_MONETARY_ACCOUNT_TYPES),
+                ('company_ids', 'in', company.ids if hasattr(company, 'ids') else [company.id]),
+                ('tag_ids', 'not in', [non_monetary_tag.id]),
+            ]
+        )
+
         if accounts:
             accounts.write({'tag_ids': [(4, non_monetary_tag.id)]})
-        
+
         return True
 
     @api.model
     def get_inflation_adjustable_accounts(self, company_id=None):
         """
         Obtiene todas las cuentas ajustables por inflación.
-        
+
         :param company_id: ID de la compañía (opcional)
         :return: recordset de cuentas ajustables
         """

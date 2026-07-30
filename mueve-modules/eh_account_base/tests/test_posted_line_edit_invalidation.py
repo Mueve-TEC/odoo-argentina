@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -25,12 +24,13 @@ from .common import EhAccountIntegrationTestCase
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
-
     def _post_move(self):
-        return self.post_balanced_move([
-            {'account': self.account_revenue, 'credit': 100.0},
-            {'account': self.account_cash, 'debit': 100.0},
-        ])
+        return self.post_balanced_move(
+            [
+                {'account': self.account_revenue, 'credit': 100.0},
+                {'account': self.account_cash, 'debit': 100.0},
+            ]
+        )
 
     def _current_version(self):
         self.company.invalidate_recordset(['eh_move_version'])
@@ -48,8 +48,7 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         self.assertGreater(
             self._current_version(),
             baseline,
-            "Changing the account of a posted move line must bump "
-            "eh_move_version so the report cache invalidates",
+            "Changing the account of a posted move line must bump " "eh_move_version so the report cache invalidates",
         )
 
     def test_amount_fields_are_material(self):
@@ -63,9 +62,11 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         from odoo.addons.eh_account_base.models.account_move import (
             _EH_MATERIAL_LINE_FIELDS,
         )
+
         for fname in ('debit', 'credit', 'balance', 'amount_currency'):
             self.assertIn(
-                fname, _EH_MATERIAL_LINE_FIELDS,
+                fname,
+                _EH_MATERIAL_LINE_FIELDS,
                 "Amount field %s must be treated as cache-material" % fname,
             )
 
@@ -79,8 +80,7 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         self.assertGreater(
             self._current_version(),
             baseline,
-            "Changing the date of a posted move line must bump "
-            "eh_move_version",
+            "Changing the date of a posted move line must bump " "eh_move_version",
         )
 
     def test_freshness_key_changes_for_report_cache(self):
@@ -98,7 +98,8 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         company_recs.invalidate_recordset(['eh_move_version'])
         key_after = sum(company_recs.mapped('eh_move_version'))
         self.assertNotEqual(
-            key_before, key_after,
+            key_before,
+            key_after,
             "The report freshness key must change after a posted line edit",
         )
 
@@ -113,18 +114,17 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         move = self._post_move()
         baseline = self._current_version()
 
-        self.env['account.move.line'].create([
-            {'move_id': move.id, 'account_id': self.account_revenue.id,
-             'credit': 10.0, 'name': 'extra-credit'},
-            {'move_id': move.id, 'account_id': self.account_cash.id,
-             'debit': 10.0, 'name': 'extra-debit'},
-        ])
+        self.env['account.move.line'].create(
+            [
+                {'move_id': move.id, 'account_id': self.account_revenue.id, 'credit': 10.0, 'name': 'extra-credit'},
+                {'move_id': move.id, 'account_id': self.account_cash.id, 'debit': 10.0, 'name': 'extra-debit'},
+            ]
+        )
 
         self.assertGreater(
             self._current_version(),
             baseline,
-            "Adding a line to a posted move must bump eh_move_version so "
-            "the report cache invalidates",
+            "Adding a line to a posted move must bump eh_move_version so " "the report cache invalidates",
         )
 
     def test_remove_line_from_posted_move_bumps_version(self):
@@ -133,12 +133,12 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         # First add a balanced pair directly against the model so the move
         # stays balanced after we drop that same pair back out.
         move = self._post_move()
-        extra = self.env['account.move.line'].create([
-            {'move_id': move.id, 'account_id': self.account_revenue.id,
-             'credit': 10.0, 'name': 'extra-credit'},
-            {'move_id': move.id, 'account_id': self.account_cash.id,
-             'debit': 10.0, 'name': 'extra-debit'},
-        ])
+        extra = self.env['account.move.line'].create(
+            [
+                {'move_id': move.id, 'account_id': self.account_revenue.id, 'credit': 10.0, 'name': 'extra-credit'},
+                {'move_id': move.id, 'account_id': self.account_cash.id, 'debit': 10.0, 'name': 'extra-debit'},
+            ]
+        )
         baseline = self._current_version()
 
         # The base account model guards a bare unlink of a posted line; the
@@ -151,33 +151,34 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         self.assertGreater(
             self._current_version(),
             baseline,
-            "Removing a line from a posted move must bump eh_move_version so "
-            "the report cache invalidates",
+            "Removing a line from a posted move must bump eh_move_version so " "the report cache invalidates",
         )
 
     def test_add_line_to_draft_move_does_not_bump(self):
         # Building up a draft entry before action_post must not bump the
         # counter: draft moves are excluded from published reports.
-        move = self.env['account.move'].create({
-            'move_type': 'entry',
-            'journal_id': self.journal_misc.id,
-            'date': fields.Date.today(),
-            'line_ids': [
-                (0, 0, {'account_id': self.account_revenue.id,
-                        'credit': 20.0, 'name': '/'}),
-                (0, 0, {'account_id': self.account_cash.id,
-                        'debit': 20.0, 'name': '/'}),
-            ],
-        })
+        move = self.env['account.move'].create(
+            {
+                'move_type': 'entry',
+                'journal_id': self.journal_misc.id,
+                'date': fields.Date.today(),
+                'line_ids': [
+                    (0, 0, {'account_id': self.account_revenue.id, 'credit': 20.0, 'name': '/'}),
+                    (0, 0, {'account_id': self.account_cash.id, 'debit': 20.0, 'name': '/'}),
+                ],
+            }
+        )
         self.assertEqual(move.state, 'draft')
         baseline = self._current_version()
 
-        move.write({'line_ids': [
-            (0, 0, {'account_id': self.account_revenue.id,
-                    'credit': 5.0, 'name': '/'}),
-            (0, 0, {'account_id': self.account_cash.id,
-                    'debit': 5.0, 'name': '/'}),
-        ]})
+        move.write(
+            {
+                'line_ids': [
+                    (0, 0, {'account_id': self.account_revenue.id, 'credit': 5.0, 'name': '/'}),
+                    (0, 0, {'account_id': self.account_cash.id, 'debit': 5.0, 'name': '/'}),
+                ]
+            }
+        )
 
         self.assertEqual(
             self._current_version(),
@@ -201,17 +202,17 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
     def test_draft_move_line_write_does_not_bump(self):
         # Draft moves are excluded from published reports, so editing a draft
         # move's lines must not bump the counter.
-        move = self.env['account.move'].create({
-            'move_type': 'entry',
-            'journal_id': self.journal_misc.id,
-            'date': fields.Date.today(),
-            'line_ids': [
-                (0, 0, {'account_id': self.account_revenue.id,
-                        'credit': 20.0, 'name': '/'}),
-                (0, 0, {'account_id': self.account_cash.id,
-                        'debit': 20.0, 'name': '/'}),
-            ],
-        })
+        move = self.env['account.move'].create(
+            {
+                'move_type': 'entry',
+                'journal_id': self.journal_misc.id,
+                'date': fields.Date.today(),
+                'line_ids': [
+                    (0, 0, {'account_id': self.account_revenue.id, 'credit': 20.0, 'name': '/'}),
+                    (0, 0, {'account_id': self.account_cash.id, 'debit': 20.0, 'name': '/'}),
+                ],
+            }
+        )
         self.assertEqual(move.state, 'draft')
         baseline = self._current_version()
 
@@ -219,10 +220,14 @@ class TestPostedLineEditInvalidation(EhAccountIntegrationTestCase):
         # stays balanced (30 == 30). The move is draft, so no bump.
         credit_line = move.line_ids.filtered(lambda l: l.credit > 0)
         debit_line = move.line_ids.filtered(lambda l: l.debit > 0)
-        move.write({'line_ids': [
-            (1, credit_line.id, {'credit': 30.0}),
-            (1, debit_line.id, {'debit': 30.0}),
-        ]})
+        move.write(
+            {
+                'line_ids': [
+                    (1, credit_line.id, {'credit': 30.0}),
+                    (1, debit_line.id, {'debit': 30.0}),
+                ]
+            }
+        )
 
         self.assertEqual(
             self._current_version(),

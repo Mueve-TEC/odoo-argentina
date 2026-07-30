@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -20,11 +19,11 @@ user - there is no privileged bypass to run under with_user.
 import socket
 from unittest.mock import patch
 
-from odoo.tests import TransactionCase, tagged
-
 from odoo.addons.eh_account_base.tools.net_guard import (
-    UnsafeUrlError, assert_safe_url,
+    UnsafeUrlError,
+    assert_safe_url,
 )
+from odoo.tests import TransactionCase, tagged
 
 # Where getproxies / proxy_bypass are bound for patching (imported into the
 # module namespace).
@@ -38,7 +37,6 @@ def _addrinfo(ip, port=443, family=2):
 
 @tagged('eh_account_base', 'post_install', '-at_install')
 class TestNetGuard(TransactionCase):
-
     # ---- blocked: scheme ----
 
     def test_rejects_file_scheme(self):
@@ -81,8 +79,7 @@ class TestNetGuard(TransactionCase):
     # ---- blocked: hostname that RESOLVES to an internal address ----
 
     def test_rejects_hostname_resolving_to_metadata(self):
-        with patch('socket.getaddrinfo',
-                   return_value=_addrinfo('169.254.169.254')):
+        with patch('socket.getaddrinfo', return_value=_addrinfo('169.254.169.254')):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://totally-benign.example.com/hook')
 
@@ -93,8 +90,7 @@ class TestNetGuard(TransactionCase):
 
     def test_rejects_ipv4_mapped_ipv6_private(self):
         # ::ffff:10.0.0.1 must be judged on the mapped v4 address.
-        with patch('socket.getaddrinfo',
-                   return_value=_addrinfo('::ffff:10.0.0.1', family=10)):
+        with patch('socket.getaddrinfo', return_value=_addrinfo('::ffff:10.0.0.1', family=10)):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://mapped.example.com/hook')
 
@@ -110,21 +106,18 @@ class TestNetGuard(TransactionCase):
 
     def test_allow_loopback_opt_in(self):
         # A local LLM provider explicitly permits loopback.
-        parsed = assert_safe_url('http://127.0.0.1:11434/v1/chat',
-                                 allow_loopback=True)
+        parsed = assert_safe_url('http://127.0.0.1:11434/v1/chat', allow_loopback=True)
         self.assertEqual(parsed.hostname, '127.0.0.1')
 
     def test_allow_private_opt_in(self):
         with patch('socket.getaddrinfo', return_value=_addrinfo('10.0.0.5')):
-            parsed = assert_safe_url('http://onprem.lan/v1',
-                                     allow_private=True)
+            parsed = assert_safe_url('http://onprem.lan/v1', allow_private=True)
         self.assertEqual(parsed.hostname, 'onprem.lan')
 
     def test_link_local_still_blocked_even_with_private_opt_in(self):
         # allow_private must NOT re-open the cloud metadata range.
         with self.assertRaises(UnsafeUrlError):
-            assert_safe_url('http://169.254.169.254/', allow_private=True,
-                            allow_loopback=True)
+            assert_safe_url('http://169.254.169.254/', allow_private=True, allow_loopback=True)
 
     # ---- proxy egress: unresolvable public host is deferred, not blocked ----
 
@@ -134,10 +127,11 @@ class TestNetGuard(TransactionCase):
         # https, so the proxy-aware urlopen would reach it. The guard must NOT
         # hard-block; it defers the real connect decision to urlopen.
         gai_fail = socket.gaierror(-2, 'Name or service not known')
-        with patch('socket.getaddrinfo', side_effect=gai_fail), \
-                patch(_NG + '.getproxies',
-                      return_value={'https': 'http://egress-proxy:3128'}), \
-                patch(_NG + '.proxy_bypass', return_value=False):
+        with (
+            patch('socket.getaddrinfo', side_effect=gai_fail),
+            patch(_NG + '.getproxies', return_value={'https': 'http://egress-proxy:3128'}),
+            patch(_NG + '.proxy_bypass', return_value=False),
+        ):
             parsed = assert_safe_url('https://hooks.slack.com/services/T/B/X')
         self.assertEqual(parsed.hostname, 'hooks.slack.com')
 
@@ -146,8 +140,7 @@ class TestNetGuard(TransactionCase):
         # still refused - it cannot be proven safe and urlopen could not reach
         # it either.
         gai_fail = socket.gaierror(-2, 'Name or service not known')
-        with patch('socket.getaddrinfo', side_effect=gai_fail), \
-                patch(_NG + '.getproxies', return_value={}):
+        with patch('socket.getaddrinfo', side_effect=gai_fail), patch(_NG + '.getproxies', return_value={}):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://hooks.slack.com/services/T/B/X')
 
@@ -156,16 +149,18 @@ class TestNetGuard(TransactionCase):
         # still refused, because a proxy would forward the request to it just
         # the same. A literal must be judged WITHOUT any DNS call - a stubbed
         # getaddrinfo that would explode proves the literal path never resolves.
-        boom = patch('socket.getaddrinfo',
-                     side_effect=AssertionError('literal must not hit DNS'))
-        with boom, \
-                patch(_NG + '.getproxies',
-                      return_value={'http': 'http://egress-proxy:3128'}), \
-                patch(_NG + '.proxy_bypass', return_value=False):
-            for url in ('http://169.254.169.254/latest/meta-data/',
-                        'http://127.0.0.1:8069/web/session',
-                        'http://10.1.2.3/hook',
-                        'http://[::1]:8069/'):
+        boom = patch('socket.getaddrinfo', side_effect=AssertionError('literal must not hit DNS'))
+        with (
+            boom,
+            patch(_NG + '.getproxies', return_value={'http': 'http://egress-proxy:3128'}),
+            patch(_NG + '.proxy_bypass', return_value=False),
+        ):
+            for url in (
+                'http://169.254.169.254/latest/meta-data/',
+                'http://127.0.0.1:8069/web/session',
+                'http://10.1.2.3/hook',
+                'http://[::1]:8069/',
+            ):
                 with self.assertRaises(UnsafeUrlError):
                     assert_safe_url(url)
 
@@ -173,11 +168,11 @@ class TestNetGuard(TransactionCase):
         # HOLE STAYS CLOSED under a proxy: if local DNS DOES resolve (split
         # horizon) to an internal address, a successful resolution is validated
         # in full and the internal target is still refused.
-        with patch('socket.getaddrinfo',
-                   return_value=_addrinfo('169.254.169.254')), \
-                patch(_NG + '.getproxies',
-                      return_value={'https': 'http://egress-proxy:3128'}), \
-                patch(_NG + '.proxy_bypass', return_value=False):
+        with (
+            patch('socket.getaddrinfo', return_value=_addrinfo('169.254.169.254')),
+            patch(_NG + '.getproxies', return_value={'https': 'http://egress-proxy:3128'}),
+            patch(_NG + '.proxy_bypass', return_value=False),
+        ):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://evil.example.com/hook')
 
@@ -186,10 +181,11 @@ class TestNetGuard(TransactionCase):
         # the https deferral must NOT fire - the unresolvable host is refused,
         # matching what urlopen (which also would not proxy it) would do.
         gai_fail = socket.gaierror(-2, 'Name or service not known')
-        with patch('socket.getaddrinfo', side_effect=gai_fail), \
-                patch(_NG + '.getproxies',
-                      return_value={'http': 'http://egress-proxy:3128'}), \
-                patch(_NG + '.proxy_bypass', return_value=False):
+        with (
+            patch('socket.getaddrinfo', side_effect=gai_fail),
+            patch(_NG + '.getproxies', return_value={'http': 'http://egress-proxy:3128'}),
+            patch(_NG + '.proxy_bypass', return_value=False),
+        ):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://hooks.slack.com/services/T/B/X')
 
@@ -197,9 +193,10 @@ class TestNetGuard(TransactionCase):
         # A host matched by no_proxy is NOT proxied (proxy_bypass -> True), so
         # the deferral is disabled and an unresolvable bypassed host is refused.
         gai_fail = socket.gaierror(-2, 'Name or service not known')
-        with patch('socket.getaddrinfo', side_effect=gai_fail), \
-                patch(_NG + '.getproxies',
-                      return_value={'https': 'http://egress-proxy:3128'}), \
-                patch(_NG + '.proxy_bypass', return_value=True):
+        with (
+            patch('socket.getaddrinfo', side_effect=gai_fail),
+            patch(_NG + '.getproxies', return_value={'https': 'http://egress-proxy:3128'}),
+            patch(_NG + '.proxy_bypass', return_value=True),
+        ):
             with self.assertRaises(UnsafeUrlError):
                 assert_safe_url('https://internal.corp/hook')

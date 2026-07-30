@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -35,14 +34,16 @@ from odoo.exceptions import UserError
 
 # Fields whose value feeds report figures. A change to any of these on a
 # posted move's line must invalidate the reporting cache.
-_EH_MATERIAL_LINE_FIELDS = frozenset({
-    'debit',
-    'credit',
-    'balance',
-    'amount_currency',
-    'account_id',
-    'date',
-})
+_EH_MATERIAL_LINE_FIELDS = frozenset(
+    {
+        'debit',
+        'credit',
+        'balance',
+        'amount_currency',
+        'account_id',
+        'date',
+    }
+)
 
 # Context flag the sanctioned reversal / reset paths set so their own unpost or
 # figure edit passes the seal below. Everything else is refused.
@@ -53,13 +54,16 @@ class AccountMove(models.Model):
     _inherit = 'account.move'
 
     eh_sealed = fields.Boolean(
-        default=False, copy=False, index=True,
+        default=False,
+        copy=False,
+        index=True,
         help="Set by an ERP Heritage sub-ledger when this journal entry is the "
-             "posted GL counterpart of a frozen figure (a provision, revenue "
-             "contract, asset, tax run, and so on). A sealed posted entry "
-             "cannot be reset to draft or have its figures edited in place; it "
-             "is unwound only by reversing the source record, which posts a "
-             "reversing entry and preserves the audit trail.")
+        "posted GL counterpart of a frozen figure (a provision, revenue "
+        "contract, asset, tax run, and so on). A sealed posted entry "
+        "cannot be reset to draft or have its figures edited in place; it "
+        "is unwound only by reversing the source record, which posts a "
+        "reversing entry and preserves the audit trail.",
+    )
 
     def _eh_sealed_posted(self):
         return self.filtered(lambda m: m.eh_sealed and m.state == 'posted')
@@ -74,13 +78,16 @@ class AccountMove(models.Model):
             return
         sealed = self._eh_sealed_posted()
         if sealed:
-            raise UserError(_(
-                "Journal entry %(names)s is the posted counterpart of an ERP "
-                "Heritage sub-ledger figure and cannot be %(action)s directly. "
-                "Reverse the source record instead: it posts a reversing entry "
-                "and re-opens the figure, preserving the audit trail.",
-                names=', '.join(sealed.mapped('name') or ['/']),
-                action=action))
+            raise UserError(
+                _(
+                    "Journal entry %(names)s is the posted counterpart of an ERP "
+                    "Heritage sub-ledger figure and cannot be %(action)s directly. "
+                    "Reverse the source record instead: it posts a reversing entry "
+                    "and re-opens the figure, preserving the audit trail.",
+                    names=', '.join(sealed.mapped('name') or ['/']),
+                    action=action,
+                )
+            )
 
     def button_draft(self):
         self._eh_guard_sealed(_("reset to draft"))
@@ -111,9 +118,7 @@ class AccountMove(models.Model):
         # A sealed posted entry must not be reset to draft or cancelled by a
         # raw ORM write (the button guards above only cover the UI path); the
         # sanctioned reversal / reset sets the context flag.
-        if vals.get('state') in ('draft', 'cancel') \
-                and not (self.env.context.get(_EH_ALLOW_UNPOST)
-                         and self.env.su):
+        if vals.get('state') in ('draft', 'cancel') and not (self.env.context.get(_EH_ALLOW_UNPOST) and self.env.su):
             self._eh_guard_sealed(_("reset to draft"))
         # Snapshot the prior state per id so we only bump the move
         # version counter when state actually changes. The previous
@@ -151,8 +156,7 @@ class AccountMoveLine(models.Model):
         lines._eh_guard_sealed_lines()
         bump_company_ids = set(posted.mapped('company_id.id'))
         if bump_company_ids:
-            self.env['res.company'].sudo()._eh_bump_move_version(
-                bump_company_ids)
+            self.env['res.company'].sudo()._eh_bump_move_version(bump_company_ids)
         return lines
 
     def unlink(self):
@@ -167,23 +171,22 @@ class AccountMoveLine(models.Model):
         bump_company_ids = set(posted.mapped('company_id.id'))
         result = super().unlink()
         if bump_company_ids:
-            self.env['res.company'].sudo()._eh_bump_move_version(
-                bump_company_ids)
+            self.env['res.company'].sudo()._eh_bump_move_version(bump_company_ids)
         return result
 
     def _eh_guard_sealed_lines(self):
         if self.env.context.get(_EH_ALLOW_UNPOST) and self.env.su:
             return
-        sealed = self.filtered(
-            lambda line: line.move_id.eh_sealed
-            and line.move_id.state == 'posted')
+        sealed = self.filtered(lambda line: line.move_id.eh_sealed and line.move_id.state == 'posted')
         if sealed:
-            raise UserError(_(
-                "The figures on journal entry %s are frozen: it is the posted "
-                "counterpart of an ERP Heritage sub-ledger figure. Reverse the "
-                "source record to change them.",
-                ', '.join(sealed.mapped('move_id.name') or ['/'])))
-
+            raise UserError(
+                _(
+                    "The figures on journal entry %s are frozen: it is the posted "
+                    "counterpart of an ERP Heritage sub-ledger figure. Reverse the "
+                    "source record to change them.",
+                    ', '.join(sealed.mapped('move_id.name') or ['/']),
+                )
+            )
 
     def write(self, vals):
         # Editing a financially-material field on a line of a SEALED posted
@@ -201,8 +204,7 @@ class AccountMoveLine(models.Model):
             bump_company_ids = set(posted.mapped('company_id.id'))
         result = super().write(vals)
         if bump_company_ids:
-            self.env['res.company'].sudo()._eh_bump_move_version(
-                bump_company_ids)
+            self.env['res.company'].sudo()._eh_bump_move_version(bump_company_ids)
         return result
 
 

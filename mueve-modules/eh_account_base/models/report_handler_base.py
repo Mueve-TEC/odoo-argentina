@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -32,11 +31,10 @@ report specific math:
 """
 
 from odoo import _, api, fields, models
+from odoo.addons.eh_account_base.tools.currency_table import CurrencyTable
+from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
 from odoo.exceptions import UserError
 from odoo.tools import SQL
-
-from odoo.addons.eh_account_base.tools.sql_builder import MoveLineQuery
-from odoo.addons.eh_account_base.tools.currency_table import CurrencyTable
 
 
 class EhAccountDynamicReportHandler(models.AbstractModel):
@@ -92,9 +90,7 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         * totals: optional dict mapping expression_label to summary value.
         * generated_at: ISO datetime string.
         """
-        raise NotImplementedError(
-            "Concrete handlers must override compute(options)."
-        )
+        raise NotImplementedError("Concrete handlers must override compute(options).")
 
     @api.model
     def resolve_currency_info(self, options):
@@ -110,11 +106,11 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         Returns a dict with keys: id, name, symbol, position, decimal_places,
         multi_currency.
         """
-        company_ids = (
-            options.get('company_ids')
-            or list(self.env.context.get(
-                'allowed_company_ids', [self.env.company.id],
-            ))
+        company_ids = options.get('company_ids') or list(
+            self.env.context.get(
+                'allowed_company_ids',
+                [self.env.company.id],
+            )
         )
         companies = self.env['res.company'].sudo().browse(company_ids)
         currencies = companies.mapped('currency_id')
@@ -177,9 +173,7 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         """
         options = options or {}
         try:
-            company_ids = [
-                int(c) for c in (company_ids or [self.env.company.id])
-            ]
+            company_ids = [int(c) for c in (company_ids or [self.env.company.id])]
         except (TypeError, ValueError):  # pragma: no cover - defensive
             company_ids = [self.env.company.id]
         presentation_currency_id = options.get('presentation_currency_id')
@@ -238,9 +232,7 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         calendar-year start via _fiscalyear_start_for.
         """
         starts = {}
-        companies = self.env['res.company'].sudo().browse([
-            int(c) for c in (company_ids or [])
-        ])
+        companies = self.env['res.company'].sudo().browse([int(c) for c in (company_ids or [])])
         for company in companies:
             starts[company.id] = self._fiscalyear_start_for(company, date)
         return starts
@@ -261,11 +253,11 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
             return SQL("%s::date", default_date)
         whens = []
         for company_id, start in fy_starts.items():
-            whens.append(
-                SQL("WHEN %s THEN %s::date", int(company_id), start))
+            whens.append(SQL("WHEN %s THEN %s::date", int(company_id), start))
         return SQL(
             "CASE aml.company_id %s ELSE %s::date END",
-            SQL(" ").join(whens), default_date,
+            SQL(" ").join(whens),
+            default_date,
         )
 
     @api.model
@@ -438,7 +430,11 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
 
     @api.model
     def _expand_build_page_query(
-        self, options, account_id, date_from, date_to,
+        self,
+        options,
+        account_id,
+        date_from,
+        date_to,
     ):
         """Build the MoveLineQuery for one account's journal-item page.
 
@@ -492,8 +488,10 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         Each fetched row is projected through _expand_child_columns.
         """
         empty = {
-            'child_lines': [], 'has_more': False,
-            'next_offset': int(offset or 0), 'total_count': 0,
+            'child_lines': [],
+            'has_more': False,
+            'next_offset': int(offset or 0),
+            'total_count': 0,
         }
         account_id = self._expand_account_id_from_line_id(line_id)
         if account_id is None:
@@ -518,14 +516,12 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
             offset = 0
 
         # Count-only pre-flight: same filters, single COUNT.
-        count_query = self._expand_build_page_query(
-            options, account_id, date_from, date_to)
+        count_query = self._expand_build_page_query(options, account_id, date_from, date_to)
         count_query.select_count(alias='row_count')
         count_rows = count_query.execute()
         total_count = int(count_rows[0]['row_count']) if count_rows else 0
 
-        page_query = self._expand_build_page_query(
-            options, account_id, date_from, date_to)
+        page_query = self._expand_build_page_query(options, account_id, date_from, date_to)
         self._expand_select_columns(page_query)
         page_query.order_by('date', 'ASC')
         page_query.order_by('id', 'ASC')
@@ -560,23 +556,25 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         """
         amount = round(float(aml_row.get('balance') or 0.0), 2)
         date_val = aml_row.get('date')
-        return [{
-            'id': "aml-%s" % aml_row.get('aml_id'),
-            'name': aml_row.get('ref') or aml_row.get('line_label') or '',
-            'level': 2,
-            'columns': self._expand_default_columns(aml_row, amount),
-            'unfoldable': False,
-            'unfolded': False,
-            'lazy': False,
-            'meta': {
-                'kind': 'aml',
-                'aml_id': aml_row.get('aml_id'),
-                'account_id': aml_row.get('account_id'),
-                'date': self._iso_date(date_val) if date_val else None,
-                'move': aml_row.get('move_name') or '',
-                'partner': aml_row.get('partner_name') or '',
-            },
-        }]
+        return [
+            {
+                'id': "aml-%s" % aml_row.get('aml_id'),
+                'name': aml_row.get('ref') or aml_row.get('line_label') or '',
+                'level': 2,
+                'columns': self._expand_default_columns(aml_row, amount),
+                'unfoldable': False,
+                'unfolded': False,
+                'lazy': False,
+                'meta': {
+                    'kind': 'aml',
+                    'aml_id': aml_row.get('aml_id'),
+                    'account_id': aml_row.get('account_id'),
+                    'date': self._iso_date(date_val) if date_val else None,
+                    'move': aml_row.get('move_name') or '',
+                    'partner': aml_row.get('partner_name') or '',
+                },
+            }
+        ]
 
     @api.model
     def _expand_default_columns(self, aml_row, amount):
@@ -600,11 +598,13 @@ class EhAccountDynamicReportHandler(models.AbstractModel):
         date_block = options.get('date') or {}
         value = date_block.get(key)
         if not value:
-            raise UserError(_(
-                "%(report)s requires options['date'][%(key)s].",
-                report=self.REPORT_NAME or "Report",
-                key=repr(key),
-            ))
+            raise UserError(
+                _(
+                    "%(report)s requires options['date'][%(key)s].",
+                    report=self.REPORT_NAME or "Report",
+                    key=repr(key),
+                )
+            )
         if isinstance(value, str):
             return fields.Date.from_string(value)
         return value

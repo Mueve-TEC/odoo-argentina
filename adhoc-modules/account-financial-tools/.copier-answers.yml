@@ -10,4 +10,3 @@ name: ADHOC Odoo Accountant Financial Tools and Utils
 odoo_version: 19.0
 pre_commit_ignore: []
 slug: ''
-

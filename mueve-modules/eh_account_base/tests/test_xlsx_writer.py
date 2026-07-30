@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -21,27 +20,20 @@ synthetic payload and verify that:
 
 import io
 
+from odoo.addons.eh_account_base.tools.xlsx_writer import XlsxReportWriter
+from odoo.tests import tagged
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
-from odoo.tests import tagged
-
-from odoo.addons.eh_account_base.tools.xlsx_writer import XlsxReportWriter
 from .common import EhAccountUnitTestCase
-
 
 PAYLOAD = {
     'columns': [
-        {'expression_label': 'account', 'name': 'Account',
-         'figure_type': 'string'},
-        {'expression_label': 'opening_debit', 'name': 'Opening DB',
-         'figure_type': 'monetary'},
-        {'expression_label': 'opening_credit', 'name': 'Opening CR',
-         'figure_type': 'monetary'},
-        {'expression_label': 'closing_debit', 'name': 'Closing DB',
-         'figure_type': 'monetary'},
-        {'expression_label': 'closing_credit', 'name': 'Closing CR',
-         'figure_type': 'monetary'},
+        {'expression_label': 'account', 'name': 'Account', 'figure_type': 'string'},
+        {'expression_label': 'opening_debit', 'name': 'Opening DB', 'figure_type': 'monetary'},
+        {'expression_label': 'opening_credit', 'name': 'Opening CR', 'figure_type': 'monetary'},
+        {'expression_label': 'closing_debit', 'name': 'Closing DB', 'figure_type': 'monetary'},
+        {'expression_label': 'closing_credit', 'name': 'Closing CR', 'figure_type': 'monetary'},
     ],
     'lines': [
         {
@@ -84,7 +76,6 @@ PAYLOAD = {
 
 @tagged('eh_account_base', 'unit')
 class TestXlsxWriterShape(EhAccountUnitTestCase):
-
     def _render(self, payload=None, name="Trial Balance"):
         content = XlsxReportWriter(name).write_payload(payload or PAYLOAD)
         return content, load_workbook(io.BytesIO(content))
@@ -106,10 +97,7 @@ class TestXlsxWriterShape(EhAccountUnitTestCase):
         _, wb = self._render()
         ws = wb.active
         # Search the first 6 rows for the meta info.
-        meta_text = " ".join(
-            (ws.cell(row=r, column=1).value or '')
-            for r in range(1, 7)
-        )
+        meta_text = " ".join((ws.cell(row=r, column=1).value or '') for r in range(1, 7))
         self.assertIn("2026-01-01", meta_text)
         self.assertIn("2026-12-31", meta_text)
         self.assertIn("Posted entries only", meta_text)
@@ -158,12 +146,14 @@ class TestXlsxWriterShape(EhAccountUnitTestCase):
         self.assertGreater(first_width, money_width)
 
     def test_empty_payload_does_not_crash(self):
-        content = XlsxReportWriter("Empty").write_payload({
-            'columns': [],
-            'lines': [],
-            'totals': {},
-            'generated_at': '',
-        })
+        content = XlsxReportWriter("Empty").write_payload(
+            {
+                'columns': [],
+                'lines': [],
+                'totals': {},
+                'generated_at': '',
+            }
+        )
         self.assertIsInstance(content, bytes)
 
     def test_sheet_name_truncated_to_31_chars(self):
@@ -177,14 +167,16 @@ class TestXlsxWriterShape(EhAccountUnitTestCase):
     def test_negative_values_render(self):
         payload = {
             'columns': [
-                {'expression_label': 'account', 'name': 'Account',
-                 'figure_type': 'string'},
-                {'expression_label': 'balance', 'name': 'Balance',
-                 'figure_type': 'monetary'},
+                {'expression_label': 'account', 'name': 'Account', 'figure_type': 'string'},
+                {'expression_label': 'balance', 'name': 'Balance', 'figure_type': 'monetary'},
             ],
             'lines': [
-                {'id': 'l1', 'name': 'Loss', 'level': 1,
-                 'columns': [{'expression_label': 'balance', 'value': -1234.56}]},
+                {
+                    'id': 'l1',
+                    'name': 'Loss',
+                    'level': 1,
+                    'columns': [{'expression_label': 'balance', 'value': -1234.56}],
+                },
             ],
             'totals': {'balance': -1234.56},
             'generated_at': '',

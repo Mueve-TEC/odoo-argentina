@@ -1,18 +1,20 @@
 # Phase 1 test plan:
 #
 # Functional unit tests:
-from . import test_suggestion_engine     # five heuristics, combined score, find_suggestions
-from . import test_reconciliation_session # lifecycle, counters, audit creation
-from . import test_auto_reconcile          # batch auto-reconcile gates
-from . import test_predictor               # counterpart prediction from history
-from . import test_writeoff_amount_types    # CE write-off amount types
-from . import test_learned_rules            # learned match rules from history
-from . import test_write_off                 # write-off + FX write-off clear lines
-from . import test_posted_move_inalterability # posted move stays immutable; adjusting entry carries reclass
-from . import test_suspense_config_immutable  # posting never flips suspense account reconcile config
-from . import test_exception_report  # exception PDF renders (report-values wiring)
-from . import test_workflow_guard  # session state machine not RPC-skippable
-from . import test_direction_guard  # wrong-side match refused (no cash misclassification)
+from . import (
+    test_auto_reconcile,  # batch auto-reconcile gates
+    test_direction_guard,  # wrong-side match refused (no cash misclassification)
+    test_exception_report,  # exception PDF renders (report-values wiring)
+    test_learned_rules,  # learned match rules from history
+    test_posted_move_inalterability,  # posted move stays immutable; adjusting entry carries reclass
+    test_predictor,  # counterpart prediction from history
+    test_reconciliation_session,  # lifecycle, counters, audit creation
+    test_suggestion_engine,  # five heuristics, combined score, find_suggestions
+    test_suspense_config_immutable,  # posting never flips suspense account reconcile config
+    test_workflow_guard,  # session state machine not RPC-skippable
+    test_write_off,  # write-off + FX write-off clear lines
+    test_writeoff_amount_types,  # CE write-off amount types
+)
 #
 # Combination tests (planned):
 #   from . import test_combo_multi_currency_match

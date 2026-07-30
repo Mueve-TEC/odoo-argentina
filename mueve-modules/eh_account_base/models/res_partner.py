@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -27,10 +26,8 @@ Both layers are no-ops when the offending column is not in the
 registry / table (i.e. when purchase_stock is not installed).
 """
 
-from psycopg2 import sql
-
 from odoo import api, models
-
+from psycopg2 import sql
 
 # Required upstream fields that ship with `default='default'` and that
 # Enterprise's _create override sometimes strips. New entries can be
@@ -72,10 +69,9 @@ class ResPartner(models.Model):
                 # the column name is properly quoted regardless of how
                 # the upstream module names it.
                 self.env.cr.execute(
-                    sql.SQL(
-                        "ALTER TABLE res_partner "
-                        "ALTER COLUMN {col} SET DEFAULT %s"
-                    ).format(col=sql.Identifier(column)),
+                    sql.SQL("ALTER TABLE res_partner " "ALTER COLUMN {col} SET DEFAULT %s").format(
+                        col=sql.Identifier(column)
+                    ),
                     [default],
                 )
         return result

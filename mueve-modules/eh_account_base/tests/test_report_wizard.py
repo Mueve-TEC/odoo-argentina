@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -18,11 +17,10 @@ Covers:
 
 import base64
 import unittest
-
-from datetime import date, timedelta
+from datetime import date
 
 from odoo import api, fields, models
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 from odoo.tests import tagged
 
 from .common import EhAccountUnitTestCase
@@ -31,6 +29,7 @@ WIZARD_TEST_HANDLER = 'eh.account.dynamic.report.handler.aged_payable'
 
 
 # A trivial test handler that always returns a fixed payload.
+
 
 class WizardTestHandler(models.AbstractModel):
     _name = 'eh.test.report.handler.wizard'
@@ -44,14 +43,16 @@ class WizardTestHandler(models.AbstractModel):
     def compute(self, options):
         return {
             'columns': [
-                {'expression_label': 'account', 'name': 'Account',
-                 'figure_type': 'string'},
-                {'expression_label': 'value', 'name': 'Value',
-                 'figure_type': 'monetary'},
+                {'expression_label': 'account', 'name': 'Account', 'figure_type': 'string'},
+                {'expression_label': 'value', 'name': 'Value', 'figure_type': 'monetary'},
             ],
             'lines': [
-                {'id': 'l1', 'name': 'Test Line', 'level': 1,
-                 'columns': [{'expression_label': 'value', 'value': 42.0}]},
+                {
+                    'id': 'l1',
+                    'name': 'Test Line',
+                    'level': 1,
+                    'columns': [{'expression_label': 'value', 'value': 42.0}],
+                },
             ],
             'totals': {'value': 42.0},
             'generated_at': fields.Datetime.now().isoformat(),
@@ -61,20 +62,20 @@ class WizardTestHandler(models.AbstractModel):
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestReportWizard(EhAccountUnitTestCase):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         if WIZARD_TEST_HANDLER not in cls.env.registry.models:
             raise unittest.SkipTest(
-                f"{WIZARD_TEST_HANDLER} not registered; install "
-                f"eh_account_dynamic_reports for these tests."
+                f"{WIZARD_TEST_HANDLER} not registered; install " f"eh_account_dynamic_reports for these tests."
             )
-        cls.report = cls.env['eh.account.dynamic.report'].create({
-            'code': 'wizard_test',
-            'name': 'Wizard Test',
-            'handler_model': WIZARD_TEST_HANDLER,
-        })
+        cls.report = cls.env['eh.account.dynamic.report'].create(
+            {
+                'code': 'wizard_test',
+                'name': 'Wizard Test',
+                'handler_model': WIZARD_TEST_HANDLER,
+            }
+        )
 
     def _make_wizard(self, **overrides):
         vals = {
@@ -118,15 +119,12 @@ class TestReportWizard(EhAccountUnitTestCase):
         self.assertEqual(action['type'], 'ir.actions.act_url')
         self.assertIn('/web/content/', action['url'])
         # The attachment should exist and contain XLSX bytes.
-        attachment_id = int(
-            action['url'].split('/web/content/')[1].split('?')[0]
-        )
+        attachment_id = int(action['url'].split('/web/content/')[1].split('?')[0])
         attachment = self.env['ir.attachment'].browse(attachment_id)
         self.assertTrue(attachment.exists())
         self.assertEqual(
             attachment.mimetype,
-            'application/vnd.openxmlformats-officedocument'
-            '.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument' '.spreadsheetml.sheet',
         )
         # First two bytes of any XLSX (ZIP container) are 'PK'.
         decoded = base64.b64decode(attachment.datas)
@@ -137,8 +135,7 @@ class TestReportWizard(EhAccountUnitTestCase):
         wizard = self._make_wizard(company_ids=[(6, 0, [])])
         # The constraint requires company_ids; clear via write to bypass.
         self.env.cr.execute(
-            "DELETE FROM eh_account_report_wizard_company_rel "
-            "WHERE wizard_id = %s",
+            "DELETE FROM eh_account_report_wizard_company_rel " "WHERE wizard_id = %s",
             (wizard.id,),
         )
         wizard.invalidate_recordset(['company_ids'])

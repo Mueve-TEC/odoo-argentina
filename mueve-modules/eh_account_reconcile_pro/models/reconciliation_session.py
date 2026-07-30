@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -25,11 +24,15 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import SQL
 
-
-_ALLOWED_COUNTERS = frozenset({
-    'matches_made', 'matches_via_suggestion', 'matches_manual',
-    'write_offs', 'skips',
-})
+_ALLOWED_COUNTERS = frozenset(
+    {
+        'matches_made',
+        'matches_via_suggestion',
+        'matches_manual',
+        'write_offs',
+        'skips',
+    }
+)
 
 
 class EhReconciliationSession(models.Model):
@@ -91,11 +94,13 @@ class EhReconciliationSession(models.Model):
     skips = fields.Integer(default=0)
 
     duration_seconds = fields.Integer(
-        compute='_compute_duration', store=True,
+        compute='_compute_duration',
+        store=True,
     )
 
     audit_ids = fields.One2many(
-        'eh.reconciliation.audit', 'session_id',
+        'eh.reconciliation.audit',
+        'session_id',
     )
     audit_count = fields.Integer(compute='_compute_audit_count')
 
@@ -112,9 +117,7 @@ class EhReconciliationSession(models.Model):
     def _compute_duration(self):
         for rec in self:
             if rec.closed_at and rec.opened_at:
-                rec.duration_seconds = int(
-                    (rec.closed_at - rec.opened_at).total_seconds()
-                )
+                rec.duration_seconds = int((rec.closed_at - rec.opened_at).total_seconds())
             else:
                 rec.duration_seconds = 0
 
@@ -167,10 +170,12 @@ class EhReconciliationSession(models.Model):
         for rec in self:
             if rec.state == 'closed':
                 continue
-            rec.write({
-                'state': 'closed',
-                'closed_at': fields.Datetime.now(),
-            })
+            rec.write(
+                {
+                    'state': 'closed',
+                    'closed_at': fields.Datetime.now(),
+                }
+            )
         return True
 
     def action_view_audits(self):
@@ -219,10 +224,13 @@ class EhReconciliationSession(models.Model):
         # this transaction. Refuse early so the caller surfaces the real
         # state to the user.
         if getattr(statement_line, 'is_reconciled', False):
-            raise UserError(_(
-                "Statement line %s is already reconciled. Unreconcile it "
-                "from the bank statement before matching it again."
-            ) % (statement_line.payment_ref or statement_line.id))
+            raise UserError(
+                _(
+                    "Statement line %s is already reconciled. Unreconcile it "
+                    "from the bank statement before matching it again."
+                )
+                % (statement_line.payment_ref or statement_line.id)
+            )
 
         aml_records = self.env['account.move.line'].browse(aml_ids).exists()
         if not aml_records:
@@ -235,12 +243,10 @@ class EhReconciliationSession(models.Model):
         # the call instead so the caller gets a clear error.
         already_reconciled = aml_records.filtered(lambda l: l.reconciled)
         if already_reconciled:
-            raise UserError(_(
-                "These journal items are already reconciled and cannot be "
-                "matched again: %s"
-            ) % ', '.join(
-                a.move_id.name or str(a.id) for a in already_reconciled
-            ))
+            raise UserError(
+                _("These journal items are already reconciled and cannot be " "matched again: %s")
+                % ', '.join(a.move_id.name or str(a.id) for a in already_reconciled)
+            )
 
         # Direction guard. A statement line may only clear a candidate SET
         # whose reclassified suspense can actually offset it. An amount
@@ -267,21 +273,18 @@ class EhReconciliationSession(models.Model):
         # candidates stay open. Refuse the wrong-side grouping before
         # anything posts.
         if not self._direction_compatible_group(statement_line, aml_records):
-            raise UserError(_(
-                "These journal items net to the wrong side of the ledger "
-                "for a bank line that was %(direction)s and cannot be "
-                "matched to it: %(items)s. An amount received must clear a "
-                "net debit (open receivable or vendor refund); an amount "
-                "paid must clear a net credit (open payable or customer "
-                "refund).",
-                direction=(
-                    _("received") if statement_line.amount > 0
-                    else _("paid")
-                ),
-                items=', '.join(
-                    a.move_id.name or str(a.id) for a in aml_records
-                ),
-            ))
+            raise UserError(
+                _(
+                    "These journal items net to the wrong side of the ledger "
+                    "for a bank line that was %(direction)s and cannot be "
+                    "matched to it: %(items)s. An amount received must clear a "
+                    "net debit (open receivable or vendor refund); an amount "
+                    "paid must clear a net credit (open payable or customer "
+                    "refund).",
+                    direction=(_("received") if statement_line.amount > 0 else _("paid")),
+                    items=', '.join(a.move_id.name or str(a.id) for a in aml_records),
+                )
+            )
 
         engine = self.env['eh.reconciliation.suggestion.engine']
         primary = aml_records[0]
@@ -293,16 +296,18 @@ class EhReconciliationSession(models.Model):
 
         Audit = self.env['eh.reconciliation.audit']
         for aml in aml_records:
-            Audit.create({
-                'session_id': self.id,
-                'statement_line_id': statement_line.id,
-                'aml_id': aml.id,
-                'user_id': self.env.user.id,
-                'confidence': confidence,
-                'rules_fired': rules,
-                'decision': 'match',
-                'source': source,
-            })
+            Audit.create(
+                {
+                    'session_id': self.id,
+                    'statement_line_id': statement_line.id,
+                    'aml_id': aml.id,
+                    'user_id': self.env.user.id,
+                    'confidence': confidence,
+                    'rules_fired': rules,
+                    'decision': 'match',
+                    'source': source,
+                }
+            )
 
         self._increment_counters('matches_made')
         if source == 'suggestion':
@@ -318,8 +323,7 @@ class EhReconciliationSession(models.Model):
     AUTO_THRESHOLD = 0.85
     AUTO_MARGIN = 0.10
 
-    def auto_reconcile(self, threshold=None, margin=None, max_lines=None,
-                       require_exact_amount=True):
+    def auto_reconcile(self, threshold=None, margin=None, max_lines=None, require_exact_amount=True):
         """Batch, deterministic auto-reconciliation of this session's
         journal.
 
@@ -345,9 +349,9 @@ class EhReconciliationSession(models.Model):
 
         engine = self.env['eh.reconciliation.suggestion.engine']
         lines = self.env['account.bank.statement.line'].search(
-            [('journal_id', '=', self.journal_id.id),
-             ('is_reconciled', '=', False)],
-            order='date, id', limit=max_lines or None,
+            [('journal_id', '=', self.journal_id.id), ('is_reconciled', '=', False)],
+            order='date, id',
+            limit=max_lines or None,
         )
         summary = {
             'considered': 0,
@@ -373,13 +377,11 @@ class EhReconciliationSession(models.Model):
             if rules:
                 source = 'rule'
             elif top['score'] >= threshold:
-                runner_up = suggestions[1]['score'] if len(
-                    suggestions) > 1 else 0.0
+                runner_up = suggestions[1]['score'] if len(suggestions) > 1 else 0.0
                 if runner_up > 0.0 and (top['score'] - runner_up) < margin:
                     summary['skipped_ambiguous'] += 1
                     continue
-                if require_exact_amount and not self._auto_amount_exact(
-                        line, top['aml_id']):
+                if require_exact_amount and not self._auto_amount_exact(line, top['aml_id']):
                     summary['skipped_ambiguous'] += 1
                     continue
                 source = 'suggestion'
@@ -408,12 +410,14 @@ class EhReconciliationSession(models.Model):
         codes = [c for c in (suggestion.get('rules_fired') or []) if c]
         if not codes:
             return self.env['eh.reconciliation.rule']
-        return self.env['eh.reconciliation.rule'].search([
-            ('code', 'in', codes),
-            ('company_id', '=', self.company_id.id),
-            ('rule_type', '=', 'match'),
-            ('auto_confirm', '=', True),
-        ])
+        return self.env['eh.reconciliation.rule'].search(
+            [
+                ('code', 'in', codes),
+                ('company_id', '=', self.company_id.id),
+                ('rule_type', '=', 'match'),
+                ('auto_confirm', '=', True),
+            ]
+        )
 
     @staticmethod
     def _sign(value):
@@ -510,28 +514,29 @@ class EhReconciliationSession(models.Model):
         # write-off would silently no-op while the audit row claimed a
         # decision had been recorded.
         if getattr(statement_line, 'is_reconciled', False):
-            raise UserError(_(
-                "Statement line %s is already reconciled and cannot be "
-                "written off again."
-            ) % (statement_line.payment_ref or statement_line.id))
+            raise UserError(
+                _("Statement line %s is already reconciled and cannot be " "written off again.")
+                % (statement_line.payment_ref or statement_line.id)
+            )
 
         self._perform_write_off(statement_line, account, label)
 
-        self.env['eh.reconciliation.audit'].create({
-            'session_id': self.id,
-            'statement_line_id': statement_line.id,
-            'aml_id': False,
-            'user_id': self.env.user.id,
-            'confidence': 0.0,
-            'rules_fired': '',
-            'decision': 'write_off',
-            'source': 'manual',
-        })
+        self.env['eh.reconciliation.audit'].create(
+            {
+                'session_id': self.id,
+                'statement_line_id': statement_line.id,
+                'aml_id': False,
+                'user_id': self.env.user.id,
+                'confidence': 0.0,
+                'rules_fired': '',
+                'decision': 'write_off',
+                'source': 'manual',
+            }
+        )
         self._increment_counters('write_offs')
         return True
 
-    def apply_fx_writeoff(self, statement_line_id, label=None,
-                          max_amount=None):
+    def apply_fx_writeoff(self, statement_line_id, label=None, max_amount=None):
         """Write off the residual of a statement line to the company's
         configured currency-exchange gain or loss account.
 
@@ -554,19 +559,23 @@ class EhReconciliationSession(models.Model):
         if not statement_line.exists():
             raise UserError(_("Unknown statement line: %s") % statement_line_id)
         if getattr(statement_line, 'is_reconciled', False):
-            raise UserError(_(
-                "Statement line %s is already reconciled.",
-                statement_line.payment_ref or statement_line.id,
-            ))
+            raise UserError(
+                _(
+                    "Statement line %s is already reconciled.",
+                    statement_line.payment_ref or statement_line.id,
+                )
+            )
         company = statement_line.company_id or self.env.company
         gain = company.income_currency_exchange_account_id
         loss = company.expense_currency_exchange_account_id
         if not gain or not loss:
-            raise UserError(_(
-                "Configure the currency-exchange gain and loss accounts "
-                "on company %(company)s before using FX auto write-off.",
-                company=company.display_name,
-            ))
+            raise UserError(
+                _(
+                    "Configure the currency-exchange gain and loss accounts "
+                    "on company %(company)s before using FX auto write-off.",
+                    company=company.display_name,
+                )
+            )
         # Compute the residual on the statement line's auto-move so we
         # can pick the right account before delegating to the standard
         # write-off helper.
@@ -575,19 +584,23 @@ class EhReconciliationSession(models.Model):
             lambda l: l.account_id.reconcile and not l.reconciled,
         )
         if not suspense_lines:
-            raise UserError(_(
-                "Cannot write off statement line %s: no reconcilable "
-                "suspense line on its move.",
-                statement_line.display_name,
-            ))
+            raise UserError(
+                _(
+                    "Cannot write off statement line %s: no reconcilable " "suspense line on its move.",
+                    statement_line.display_name,
+                )
+            )
         residual = sum(suspense_lines.mapped('amount_residual'))
         if max_amount is not None and abs(residual) > max_amount:
-            raise UserError(_(
-                "Residual %(amt).2f exceeds the FX auto-write-off cap "
-                "of %(cap).2f. Use a manual write-off and capture a "
-                "reason instead.",
-                amt=residual, cap=max_amount,
-            ))
+            raise UserError(
+                _(
+                    "Residual %(amt).2f exceeds the FX auto-write-off cap "
+                    "of %(cap).2f. Use a manual write-off and capture a "
+                    "reason instead.",
+                    amt=residual,
+                    cap=max_amount,
+                )
+            )
         # residual > 0 means we still have a debit residual on a
         # receivable-style suspense; the bank received less than booked
         # so we recognise an exchange loss. residual < 0 means we
@@ -595,16 +608,18 @@ class EhReconciliationSession(models.Model):
         target_account = loss if residual > 0 else gain
         write_off_label = label or _("FX rounding write-off")
         self._perform_write_off(statement_line, target_account, write_off_label)
-        self.env['eh.reconciliation.audit'].create({
-            'session_id': self.id,
-            'statement_line_id': statement_line.id,
-            'aml_id': False,
-            'user_id': self.env.user.id,
-            'confidence': 1.0,
-            'rules_fired': 'fx_writeoff',
-            'decision': 'write_off',
-            'source': 'manual',
-        })
+        self.env['eh.reconciliation.audit'].create(
+            {
+                'session_id': self.id,
+                'statement_line_id': statement_line.id,
+                'aml_id': False,
+                'user_id': self.env.user.id,
+                'confidence': 1.0,
+                'rules_fired': 'fx_writeoff',
+                'decision': 'write_off',
+                'source': 'manual',
+            }
+        )
         self._increment_counters('write_offs')
         return True
 
@@ -619,16 +634,18 @@ class EhReconciliationSession(models.Model):
         if self.state != 'open':
             raise UserError(_("Cannot skip on a closed session."))
 
-        self.env['eh.reconciliation.audit'].create({
-            'session_id': self.id,
-            'statement_line_id': statement_line_id,
-            'aml_id': False,
-            'user_id': self.env.user.id,
-            'confidence': 0.0,
-            'rules_fired': '',
-            'decision': 'skip',
-            'source': 'manual',
-        })
+        self.env['eh.reconciliation.audit'].create(
+            {
+                'session_id': self.id,
+                'statement_line_id': statement_line_id,
+                'aml_id': False,
+                'user_id': self.env.user.id,
+                'confidence': 0.0,
+                'rules_fired': '',
+                'decision': 'skip',
+                'source': 'manual',
+            }
+        )
         self._increment_counters('skips')
         return True
 
@@ -653,14 +670,14 @@ class EhReconciliationSession(models.Model):
         if not validated:
             return
         self.flush_recordset(validated)
-        set_clause = SQL(', ').join(
-            SQL("%s = %s + 1", SQL.identifier(f), SQL.identifier(f))
-            for f in validated
+        set_clause = SQL(', ').join(SQL("%s = %s + 1", SQL.identifier(f), SQL.identifier(f)) for f in validated)
+        self.env.cr.execute(
+            SQL(
+                "UPDATE eh_reconciliation_session SET %s WHERE id IN %s",
+                set_clause,
+                tuple(self.ids),
+            )
         )
-        self.env.cr.execute(SQL(
-            "UPDATE eh_reconciliation_session SET %s WHERE id IN %s",
-            set_clause, tuple(self.ids),
-        ))
         self.invalidate_recordset(validated)
 
     # ---- workspace RPC ----
@@ -685,29 +702,33 @@ class EhReconciliationSession(models.Model):
                     ('journal_id', '=', journal_id),
                     ('is_reconciled', '=', False),
                 ],
-                limit=200, order='id desc',
+                limit=200,
+                order='id desc',
             )
         except ValueError:
             # Older versions may not have is_reconciled as searchable;
             # fall back to a Python filter.
             sl_records = SLine.search(
                 [('journal_id', '=', journal_id)],
-                limit=400, order='id desc',
+                limit=400,
+                order='id desc',
             ).filtered(lambda s: not getattr(s, 'is_reconciled', False))[:200]
 
         statement_lines = []
         for sl in sl_records:
             currency = sl.currency_id or sl.company_id.currency_id
-            statement_lines.append({
-                'id': sl.id,
-                'date': sl.date.isoformat() if sl.date else None,
-                'amount': sl.amount,
-                'partner_id': sl.partner_id.id or False,
-                'partner_name': sl.partner_id.name or '',
-                'payment_ref': sl.payment_ref or '',
-                'ref': sl.ref or '',
-                'currency_code': currency.name if currency else '',
-            })
+            statement_lines.append(
+                {
+                    'id': sl.id,
+                    'date': sl.date.isoformat() if sl.date else None,
+                    'amount': sl.amount,
+                    'partner_id': sl.partner_id.id or False,
+                    'partner_name': sl.partner_id.name or '',
+                    'payment_ref': sl.payment_ref or '',
+                    'ref': sl.ref or '',
+                    'currency_code': currency.name if currency else '',
+                }
+            )
 
         return {
             'session': self._serialize_session(session),
@@ -715,19 +736,24 @@ class EhReconciliationSession(models.Model):
         }
 
     @api.model
-    def get_suggestions_for_line(self, statement_line_id, limit=10,
-                                 threshold=0.3):
+    def get_suggestions_for_line(self, statement_line_id, limit=10, threshold=0.3):
         """Return scored suggestions enriched with the AML fields the OWL
         widget needs to render each candidate.
         """
-        statement_line = self.env['account.bank.statement.line'].browse(
-            statement_line_id,
-        ).exists()
+        statement_line = (
+            self.env['account.bank.statement.line']
+            .browse(
+                statement_line_id,
+            )
+            .exists()
+        )
         if not statement_line:
             return []
         engine = self.env['eh.reconciliation.suggestion.engine']
         raw = engine.find_suggestions(
-            statement_line, limit=limit, threshold=threshold,
+            statement_line,
+            limit=limit,
+            threshold=threshold,
         )
         if not raw:
             return []
@@ -740,19 +766,21 @@ class EhReconciliationSession(models.Model):
             if not aml:
                 continue
             currency = aml.currency_id or aml.company_id.currency_id
-            out.append({
-                'aml_id': aml.id,
-                'score': r['score'],
-                'breakdown': r['breakdown'],
-                'rules_fired': r['rules_fired'],
-                'date': aml.date.isoformat() if aml.date else None,
-                'partner_name': aml.partner_id.name or '',
-                'amount_residual': aml.amount_residual,
-                'currency_code': currency.name if currency else '',
-                'move_name': aml.move_id.name or '',
-                'ref': aml.ref or '',
-                'label': aml.name or '',
-            })
+            out.append(
+                {
+                    'aml_id': aml.id,
+                    'score': r['score'],
+                    'breakdown': r['breakdown'],
+                    'rules_fired': r['rules_fired'],
+                    'date': aml.date.isoformat() if aml.date else None,
+                    'partner_name': aml.partner_id.name or '',
+                    'amount_residual': aml.amount_residual,
+                    'currency_code': currency.name if currency else '',
+                    'move_name': aml.move_id.name or '',
+                    'ref': aml.ref or '',
+                    'label': aml.name or '',
+                }
+            )
         return out
 
     @staticmethod
@@ -761,9 +789,7 @@ class EhReconciliationSession(models.Model):
             'id': session.id,
             'name': session.name or '',
             'state': session.state,
-            'opened_at': (
-                session.opened_at.isoformat() if session.opened_at else None
-            ),
+            'opened_at': (session.opened_at.isoformat() if session.opened_at else None),
             'matches_made': session.matches_made,
             'matches_via_suggestion': session.matches_via_suggestion,
             'matches_manual': session.matches_manual,
@@ -781,13 +807,13 @@ class EhReconciliationSession(models.Model):
         open_suspense = suspense.filtered(lambda l: not l.reconciled)
         if not open_suspense:
             open_suspense = move.line_ids.filtered(
-                lambda l: l.account_id.reconcile and not l.reconciled
+                lambda l: l.account_id.reconcile
+                and not l.reconciled
                 and l.account_id != statement_line.journal_id.default_account_id
             )
         return open_suspense
 
-    def _post_reclassification_entry(self, open_suspense, target_account,
-                                     label):
+    def _post_reclassification_entry(self, open_suspense, target_account, label):
         """Post a balanced adjusting entry that carries the open suspense
         balance onto ``target_account`` and reconcile the original suspense
         line against it.
@@ -814,14 +840,16 @@ class EhReconciliationSession(models.Model):
         # chart-of-accounts configuration behind the user's back. The user
         # must correct the account (or journal) configuration deliberately.
         if not suspense_account.reconcile:
-            raise UserError(_(
-                "Cannot reclassify the suspense balance: account %s is not "
-                "marked as reconcilable, so the adjusting entry could not "
-                "clear against the original suspense line. Enable "
-                "'Allow Reconciliation' on this account, or point the bank "
-                "journal at a reconcilable suspense account, then retry.",
-                suspense_account.display_name,
-            ))
+            raise UserError(
+                _(
+                    "Cannot reclassify the suspense balance: account %s is not "
+                    "marked as reconcilable, so the adjusting entry could not "
+                    "clear against the original suspense line. Enable "
+                    "'Allow Reconciliation' on this account, or point the bank "
+                    "journal at a reconcilable suspense account, then retry.",
+                    suspense_account.display_name,
+                )
+            )
         # Net residual on the open suspense line(s), rounded in company
         # currency so the adjusting entry balances by construction.
         residual = currency.round(sum(open_suspense.mapped('amount_residual')))
@@ -832,33 +860,41 @@ class EhReconciliationSession(models.Model):
         # counter-leg is a credit on suspense and a debit on the target.
         suspense_debit = -residual if residual < 0 else 0.0
         suspense_credit = residual if residual > 0 else 0.0
-        adjusting = self.env['account.move'].create({
-            'move_type': 'entry',
-            'journal_id': journal.id,
-            'date': move.date or fields.Date.context_today(self),
-            'company_id': company.id,
-            'ref': label,
-            'line_ids': [
-                (0, 0, {
-                    'account_id': suspense_account.id,
-                    'name': label,
-                    'partner_id': partner.id or False,
-                    'debit': suspense_debit,
-                    'credit': suspense_credit,
-                }),
-                (0, 0, {
-                    'account_id': target_account.id,
-                    'name': label,
-                    'partner_id': partner.id or False,
-                    'debit': suspense_credit,
-                    'credit': suspense_debit,
-                }),
-            ],
-        })
-        adjusting.action_post()
-        counter_suspense = adjusting.line_ids.filtered(
-            lambda l: l.account_id == suspense_account and not l.reconciled
+        adjusting = self.env['account.move'].create(
+            {
+                'move_type': 'entry',
+                'journal_id': journal.id,
+                'date': move.date or fields.Date.context_today(self),
+                'company_id': company.id,
+                'ref': label,
+                'line_ids': [
+                    (
+                        0,
+                        0,
+                        {
+                            'account_id': suspense_account.id,
+                            'name': label,
+                            'partner_id': partner.id or False,
+                            'debit': suspense_debit,
+                            'credit': suspense_credit,
+                        },
+                    ),
+                    (
+                        0,
+                        0,
+                        {
+                            'account_id': target_account.id,
+                            'name': label,
+                            'partner_id': partner.id or False,
+                            'debit': suspense_credit,
+                            'credit': suspense_debit,
+                        },
+                    ),
+                ],
+            }
         )
+        adjusting.action_post()
+        counter_suspense = adjusting.line_ids.filtered(lambda l: l.account_id == suspense_account and not l.reconciled)
         (open_suspense + counter_suspense).reconcile()
         return adjusting
 
@@ -866,9 +902,7 @@ class EhReconciliationSession(models.Model):
         """Return the open reclassification leg of an adjusting entry that
         sits on ``target_account`` (the leg that clears against candidate
         AMLs during a match)."""
-        return adjusting.line_ids.filtered(
-            lambda l: l.account_id == target_account and not l.reconciled
-        )
+        return adjusting.line_ids.filtered(lambda l: l.account_id == target_account and not l.reconciled)
 
     def _perform_reconciliation(self, statement_line, aml_records):
         """Perform the actual reconciliation between a statement line and
@@ -897,19 +931,16 @@ class EhReconciliationSession(models.Model):
         with self.env.cr.savepoint():
             if any(l.account_id != target_account for l in open_suspense):
                 label = _("Reconciliation reclass %s", move.name or '')
-                adjusting = self._post_reclassification_entry(
-                    open_suspense, target_account, label)
+                adjusting = self._post_reclassification_entry(open_suspense, target_account, label)
                 # The adjusting entry's target-account leg carries the
                 # balance now sitting against the candidate items.
-                to_reconcile = self._adjusting_target_line(
-                    adjusting, target_account)
+                to_reconcile = self._adjusting_target_line(adjusting, target_account)
             else:
                 # The suspense line already sat on the target account, so it
                 # clears directly against the candidate AMLs. Reconciling it
                 # to zero drives the statement line to reconciled without
                 # touching the posted move's account distribution.
-                to_reconcile = open_suspense.filtered(
-                    lambda l: not l.reconciled)
+                to_reconcile = open_suspense.filtered(lambda l: not l.reconciled)
             if to_reconcile:
                 # Defense in depth against a silent no-op. _post_reclassifi-
                 # cation_entry already cleared the suspense against its
@@ -920,19 +951,18 @@ class EhReconciliationSession(models.Model):
                 # a genuine match strictly reduces it. If nothing moved,
                 # raise so the savepoint rolls the reclassification back and
                 # no false 'match' is recorded.
-                pre_residual = sum(
-                    abs(a.amount_residual) for a in aml_records)
+                pre_residual = sum(abs(a.amount_residual) for a in aml_records)
                 (to_reconcile + aml_records).reconcile()
-                aml_records.invalidate_recordset(
-                    ['amount_residual', 'reconciled'])
-                post_residual = sum(
-                    abs(a.amount_residual) for a in aml_records)
+                aml_records.invalidate_recordset(['amount_residual', 'reconciled'])
+                post_residual = sum(abs(a.amount_residual) for a in aml_records)
                 if post_residual >= pre_residual:
-                    raise UserError(_(
-                        "Reconciliation did not clear any of the selected "
-                        "journal items; they are incompatible with this "
-                        "statement line. No adjusting entry was posted."
-                    ))
+                    raise UserError(
+                        _(
+                            "Reconciliation did not clear any of the selected "
+                            "journal items; they are incompatible with this "
+                            "statement line. No adjusting entry was posted."
+                        )
+                    )
 
     def _perform_write_off(self, statement_line, account, label):
         """Write off a statement line's residual to the supplied account.
@@ -951,22 +981,24 @@ class EhReconciliationSession(models.Model):
         move = statement_line.move_id
         open_suspense = self._find_open_suspense(statement_line)
         if not open_suspense:
-            raise UserError(_(
-                "Cannot write off statement line %s: it has no open "
-                "reconcilable suspense line on its journal move. "
-                "Verify the bank journal's suspense account is set "
-                "and the statement line was processed normally.",
-                statement_line.display_name,
-            ))
+            raise UserError(
+                _(
+                    "Cannot write off statement line %s: it has no open "
+                    "reconcilable suspense line on its journal move. "
+                    "Verify the bank journal's suspense account is set "
+                    "and the statement line was processed normally.",
+                    statement_line.display_name,
+                )
+            )
         residual = sum(open_suspense.mapped('amount_residual'))
         if move.company_id.currency_id.is_zero(residual):
-            raise UserError(_(
-                "Cannot write off statement line %s: residual is "
-                "already zero.",
-                statement_line.display_name,
-            ))
+            raise UserError(
+                _(
+                    "Cannot write off statement line %s: residual is " "already zero.",
+                    statement_line.display_name,
+                )
+            )
         write_off_label = label or _("Write-off")
         with self.env.cr.savepoint():
-            self._post_reclassification_entry(
-                open_suspense, account, write_off_label)
+            self._post_reclassification_entry(open_suspense, account, write_off_label)
         return True

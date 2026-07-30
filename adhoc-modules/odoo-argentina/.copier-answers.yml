@@ -10,4 +10,3 @@ name: ADHOC odoo-argentina
 odoo_version: 19.0
 pre_commit_ignore: []
 slug: ''
-

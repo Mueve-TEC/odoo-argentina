@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -22,7 +21,6 @@ from .common import EhReconcileIntegrationTestCase
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestSessionLifecycle(EhReconcileIntegrationTestCase):
-
     def test_open_or_create_creates_when_absent(self):
         Session = self.env['eh.reconciliation.session']
         session = Session.open_or_create(self.bank_journal.id)
@@ -64,7 +62,6 @@ class TestSessionLifecycle(EhReconcileIntegrationTestCase):
 
 @tagged('eh_account_reconcile_pro', 'integration', 'post_install', '-at_install')
 class TestSessionDecisions(EhReconcileIntegrationTestCase):
-
     def setUp(self):
         super().setUp()
         Session = self.env['eh.reconciliation.session']
@@ -72,7 +69,8 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
 
     def test_apply_match_creates_audit_row(self):
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a,
+            amount=100.0,
+            partner=self.partner_a,
             payment_ref='INV-001',
         )
         aml = self.make_open_invoice_line(self.partner_a, 100.0, ref='INV-001')
@@ -80,9 +78,12 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
         self.assertEqual(self.session.matches_made, 1)
         self.assertEqual(self.session.matches_manual, 1)
         self.assertEqual(self.session.matches_via_suggestion, 0)
-        audit = self.env['eh.reconciliation.audit'].search([
-            ('session_id', '=', self.session.id),
-        ], limit=1)
+        audit = self.env['eh.reconciliation.audit'].search(
+            [
+                ('session_id', '=', self.session.id),
+            ],
+            limit=1,
+        )
         self.assertTrue(audit)
         self.assertEqual(audit.decision, 'match')
         self.assertEqual(audit.source, 'manual')
@@ -97,16 +98,24 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
     def test_apply_match_records_confidence_and_rules(self):
         date = fields.Date.from_string('2026-06-15')
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a, date=date,
+            amount=100.0,
+            partner=self.partner_a,
+            date=date,
             payment_ref='INV-2026-0042',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100.0, date=date, ref='INV-2026-0042',
+            self.partner_a,
+            100.0,
+            date=date,
+            ref='INV-2026-0042',
         )
         self.session.apply_match(sl.id, aml.ids, source='suggestion')
-        audit = self.env['eh.reconciliation.audit'].search([
-            ('session_id', '=', self.session.id),
-        ], limit=1)
+        audit = self.env['eh.reconciliation.audit'].search(
+            [
+                ('session_id', '=', self.session.id),
+            ],
+            limit=1,
+        )
         self.assertGreater(audit.confidence, 0.5)
         self.assertIn('amount', audit.rules_fired)
         self.assertIn('partner', audit.rules_fired)
@@ -117,23 +126,31 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
         and increments matches_made exactly once (not per AML, and neither
         as a manual nor a suggestion match)."""
         sl = self.make_statement_line(
-            amount=150.0, partner=self.partner_a, payment_ref='INV-BULK',
+            amount=150.0,
+            partner=self.partner_a,
+            payment_ref='INV-BULK',
         )
         aml1 = self.make_open_invoice_line(
-            self.partner_a, 100.0, ref='INV-BULK-1',
+            self.partner_a,
+            100.0,
+            ref='INV-BULK-1',
         )
         aml2 = self.make_open_invoice_line(
-            self.partner_a, 50.0, ref='INV-BULK-2',
+            self.partner_a,
+            50.0,
+            ref='INV-BULK-2',
         )
         aml_ids = (aml1 + aml2).ids
         self.session.apply_match(sl.id, aml_ids, source='bulk')
         self.assertEqual(self.session.matches_made, 1)
         self.assertEqual(self.session.matches_manual, 0)
         self.assertEqual(self.session.matches_via_suggestion, 0)
-        audits = self.env['eh.reconciliation.audit'].search([
-            ('session_id', '=', self.session.id),
-            ('decision', '=', 'match'),
-        ])
+        audits = self.env['eh.reconciliation.audit'].search(
+            [
+                ('session_id', '=', self.session.id),
+                ('decision', '=', 'match'),
+            ]
+        )
         self.assertEqual(len(audits), 2)
         self.assertEqual(set(audits.mapped('source')), {'bulk'})
         self.assertEqual(set(audits.mapped('aml_id').ids), set(aml_ids))
@@ -142,19 +159,26 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
         """A drag-and-drop match records source='drag_drop' on the audit
         row and counts as a manual match on the session counters."""
         sl = self.make_statement_line(
-            amount=100.0, partner=self.partner_a, payment_ref='INV-DND',
+            amount=100.0,
+            partner=self.partner_a,
+            payment_ref='INV-DND',
         )
         aml = self.make_open_invoice_line(
-            self.partner_a, 100.0, ref='INV-DND',
+            self.partner_a,
+            100.0,
+            ref='INV-DND',
         )
         self.session.apply_match(sl.id, aml.ids, source='drag_drop')
         self.assertEqual(self.session.matches_made, 1)
         self.assertEqual(self.session.matches_manual, 1)
         self.assertEqual(self.session.matches_via_suggestion, 0)
-        audit = self.env['eh.reconciliation.audit'].search([
-            ('session_id', '=', self.session.id),
-            ('decision', '=', 'match'),
-        ], limit=1)
+        audit = self.env['eh.reconciliation.audit'].search(
+            [
+                ('session_id', '=', self.session.id),
+                ('decision', '=', 'match'),
+            ],
+            limit=1,
+        )
         self.assertEqual(audit.source, 'drag_drop')
 
     def test_apply_match_rejects_empty_aml_list(self):
@@ -177,10 +201,13 @@ class TestSessionDecisions(EhReconcileIntegrationTestCase):
         sl = self.make_statement_line(amount=100.0, partner=self.partner_a)
         self.session.apply_skip(sl.id)
         self.assertEqual(self.session.skips, 1)
-        audit = self.env['eh.reconciliation.audit'].search([
-            ('session_id', '=', self.session.id),
-            ('decision', '=', 'skip'),
-        ], limit=1)
+        audit = self.env['eh.reconciliation.audit'].search(
+            [
+                ('session_id', '=', self.session.id),
+                ('decision', '=', 'skip'),
+            ],
+            limit=1,
+        )
         self.assertTrue(audit)
         self.assertFalse(audit.aml_id)
 

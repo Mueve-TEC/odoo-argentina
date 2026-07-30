@@ -53,7 +53,7 @@
                 <field name="date" />
                 <field name="value" />
                 <filter name="filter_current_year" string="Año Actual"
-                    domain="[('date', '>=', (context_today().replace(month=1, day=1))), 
+                    domain="[('date', '>=', (context_today().replace(month=1, day=1))),
                                  ('date', '&lt;=', context_today())]" />
                 <filter name="filter_last_year" string="Año Anterior"
                     domain="[('date', '>=', (context_today() - relativedelta(years=1)).replace(month=1, day=1)),

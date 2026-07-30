@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 
+<!--
     Tag para identificar cuentas no monetarias (ajustables por inflación)
-    
-    Según RT 6 y RT 17, las cuentas no monetarias son aquellas que no 
+
+    Según RT 6 y RT 17, las cuentas no monetarias son aquellas que no
     representan moneda de curso legal ni derechos/obligaciones en moneda.
-    
+
     Ejemplos de cuentas NO MONETARIAS (se ajustan):
     - Bienes de uso (activos fijos)
     - Inversiones permanentes
@@ -12,7 +12,7 @@
     - Inventarios (en algunos casos)
     - Patrimonio neto
     - Resultados (ingresos y gastos)
-    
+
     Ejemplos de cuentas MONETARIAS (NO se ajustan):
     - Caja y bancos
     - Créditos por ventas

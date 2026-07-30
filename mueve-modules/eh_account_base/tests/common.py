@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -60,8 +59,7 @@ class EhAccountIntegrationTestCase(TransactionCase):
         # company they are unset, so bank statement lines and payments are
         # refused ("no Suspense Account configured"). Provision them so any
         # bank journal a test creates works; 17/18/19 already have them.
-        suspense = cls._ensure_account(
-            cls.env, '1099', 'Bank Suspense', 'asset_current')
+        suspense = cls._ensure_account(cls.env, '1099', 'Bank Suspense', 'asset_current')
         # A bank journal's suspense account is reconcilable in real Odoo;
         # reclassifying a statement line's residual clears the counter-leg
         # against the original suspense line, which requires reconciliation.
@@ -69,8 +67,7 @@ class EhAccountIntegrationTestCase(TransactionCase):
         # configured chart of accounts.
         if not suspense.reconcile:
             suspense.sudo().reconcile = True
-        outstanding = cls._ensure_account(
-            cls.env, '1098', 'Outstanding Payments', 'asset_current')
+        outstanding = cls._ensure_account(cls.env, '1098', 'Outstanding Payments', 'asset_current')
         # Outstanding receipt/payment accounts must be reconcilable: Odoo
         # validates that a company payment debit/credit account is a
         # reconcilable account.
@@ -78,37 +75,57 @@ class EhAccountIntegrationTestCase(TransactionCase):
             outstanding.sudo().reconcile = True
         comp_vals = {}
         comp_fields = cls.company._fields
-        if ('account_journal_suspense_account_id' in comp_fields
-                and not cls.company.account_journal_suspense_account_id):
+        if 'account_journal_suspense_account_id' in comp_fields and not cls.company.account_journal_suspense_account_id:
             comp_vals['account_journal_suspense_account_id'] = suspense.id
-        for fname in ('account_journal_payment_debit_account_id',
-                      'account_journal_payment_credit_account_id'):
+        for fname in ('account_journal_payment_debit_account_id', 'account_journal_payment_credit_account_id'):
             if fname in comp_fields and not cls.company[fname]:
                 comp_vals[fname] = outstanding.id
         if comp_vals:
             cls.company.sudo().write(comp_vals)
 
         cls.account_receivable = cls._ensure_account(
-            cls.env, '1100', 'Trade Receivables', 'asset_receivable',
+            cls.env,
+            '1100',
+            'Trade Receivables',
+            'asset_receivable',
         )
         cls.account_payable = cls._ensure_account(
-            cls.env, '2100', 'Trade Payables', 'liability_payable',
+            cls.env,
+            '2100',
+            'Trade Payables',
+            'liability_payable',
         )
         cls.account_revenue = cls._ensure_account(
-            cls.env, '4000', 'Sales Revenue', 'income',
+            cls.env,
+            '4000',
+            'Sales Revenue',
+            'income',
         )
         cls.account_expense = cls._ensure_account(
-            cls.env, '5000', 'Cost of Sales', 'expense',
+            cls.env,
+            '5000',
+            'Cost of Sales',
+            'expense',
         )
         cls.account_cash = cls._ensure_account(
-            cls.env, '1000', 'Cash on Hand', 'asset_cash',
+            cls.env,
+            '1000',
+            'Cash on Hand',
+            'asset_cash',
         )
         cls.account_equity = cls._ensure_account(
-            cls.env, '3000', 'Owner Equity', 'equity',
+            cls.env,
+            '3000',
+            'Owner Equity',
+            'equity',
         )
 
         cls.journal_misc = cls._ensure_journal(
-            cls.env, cls.company, 'general', 'MISC', 'Miscellaneous',
+            cls.env,
+            cls.company,
+            'general',
+            'MISC',
+            'Miscellaneous',
         )
         # Odoo 17/18/19 auto-provision sale/purchase journals on the company;
         # Odoo 16 with --without-demo does not, so tests that create customer
@@ -116,11 +133,19 @@ class EhAccountIntegrationTestCase(TransactionCase):
         # sale/purchase". Provision them explicitly (search-first, so nothing
         # changes on versions that already have them).
         cls.journal_sale = cls._ensure_journal(
-            cls.env, cls.company, 'sale', 'INV', 'Customer Invoices',
+            cls.env,
+            cls.company,
+            'sale',
+            'INV',
+            'Customer Invoices',
             default_account=cls.account_revenue,
         )
         cls.journal_purchase = cls._ensure_journal(
-            cls.env, cls.company, 'purchase', 'BILL', 'Vendor Bills',
+            cls.env,
+            cls.company,
+            'purchase',
+            'BILL',
+            'Vendor Bills',
             default_account=cls.account_expense,
         )
 
@@ -138,8 +163,7 @@ class EhAccountIntegrationTestCase(TransactionCase):
                 ('property_account_payable_id', cls.account_payable),
             ):
                 if not IrProperty._get(prop_name, 'res.partner'):
-                    IrProperty._set_default(
-                        prop_name, 'res.partner', account, company=cls.company)
+                    IrProperty._set_default(prop_name, 'res.partner', account, company=cls.company)
             # Product category income/expense defaults, so an invoice line
             # with a product resolves an account on a demo-less 16 company.
             for prop_name, account in (
@@ -147,9 +171,7 @@ class EhAccountIntegrationTestCase(TransactionCase):
                 ('property_account_expense_categ_id', cls.account_expense),
             ):
                 if not IrProperty._get(prop_name, 'product.category'):
-                    IrProperty._set_default(
-                        prop_name, 'product.category', account,
-                        company=cls.company)
+                    IrProperty._set_default(prop_name, 'product.category', account, company=cls.company)
 
         cls.partner_a = cls.env['res.partner'].create({'name': 'Test Partner A'})
         cls.partner_b = cls.env['res.partner'].create({'name': 'Test Partner B'})
@@ -162,8 +184,7 @@ class EhAccountIntegrationTestCase(TransactionCase):
         Account = env['account.account']
         multi = 'company_ids' in Account._fields
         company_field = 'company_ids' if multi else 'company_id'
-        company_value = (
-            [(6, 0, env.company.ids)] if multi else env.company.id)
+        company_value = [(6, 0, env.company.ids)] if multi else env.company.id
         existing = Account.search(
             [
                 ('code', '=', code),
@@ -182,7 +203,9 @@ class EhAccountIntegrationTestCase(TransactionCase):
         # Reconcilable types must carry reconcile=True for amount_residual to
         # compute correctly. Aged receivable/payable tests rely on this.
         if account_type in (
-            'asset_receivable', 'liability_payable', 'liability_credit_card',
+            'asset_receivable',
+            'liability_payable',
+            'liability_credit_card',
         ):
             vals['reconcile'] = True
         return env['account.account'].create(vals)
@@ -193,12 +216,15 @@ class EhAccountIntegrationTestCase(TransactionCase):
         one if the framework did not provision it (Odoo 16 without demo)."""
         Journal = env['account.journal']
         journal = Journal.search(
-            [('company_id', '=', company.id), ('type', '=', jtype)], limit=1,
+            [('company_id', '=', company.id), ('type', '=', jtype)],
+            limit=1,
         )
         if journal:
             return journal
         vals = {
-            'name': name, 'code': code, 'type': jtype,
+            'name': name,
+            'code': code,
+            'type': jtype,
             'company_id': company.id,
         }
         if default_account is not None:
@@ -229,11 +255,13 @@ class EhAccountIntegrationTestCase(TransactionCase):
             if 'date_maturity' in line:
                 vals['date_maturity'] = line['date_maturity']
             line_vals.append((0, 0, vals))
-        move = cls.env['account.move'].create({
-            'move_type': 'entry',
-            'journal_id': journal.id,
-            'date': date,
-            'line_ids': line_vals,
-        })
+        move = cls.env['account.move'].create(
+            {
+                'move_type': 'entry',
+                'journal_id': journal.id,
+                'date': date,
+                'line_ids': line_vals,
+            }
+        )
         move.action_post()
         return move

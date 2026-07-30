@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -26,10 +25,7 @@ class AccountBankStatement(models.Model):
 
     eh_unmatched_line_count = fields.Integer(
         compute='_compute_eh_unmatched_line_count',
-        help=(
-            "Statement lines on this statement that have not yet "
-            "been reconciled. Refreshes on every form load."
-        ),
+        help=("Statement lines on this statement that have not yet " "been reconciled. Refreshes on every form load."),
     )
 
     @api.depends('line_ids', 'line_ids.is_reconciled')

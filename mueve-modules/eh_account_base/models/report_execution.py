@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -127,7 +126,8 @@ class EhAccountReportExecution(models.Model):
     )
     served_from_execution_id = fields.Many2one(
         'eh.account.report.execution',
-        index=True, ondelete='set null',
+        index=True,
+        ondelete='set null',
         help=(
             "When this execution served a result from a prior cached "
             "execution, this is a pointer to that prior execution. The "
@@ -174,26 +174,34 @@ class EhAccountReportExecution(models.Model):
             raise ValueError("start_execution requires at least one company id")
         company_recs = self.env['res.company'].sudo().browse(company_ids_list)
         move_version_total = sum(company_recs.mapped('eh_move_version'))
-        return self.create({
-            'report_code': report_code,
-            'name': name,
-            'company_ids': [(6, 0, company_ids_list)],
-            'options_snapshot': json.dumps(options, sort_keys=True, default=str, indent=2),
-            'options_hash': options_hash,
-            'result_format': result_format,
-            'state': 'running',
-            'move_version_at_start': move_version_total,
-        })
+        return self.create(
+            {
+                'report_code': report_code,
+                'name': name,
+                'company_ids': [(6, 0, company_ids_list)],
+                'options_snapshot': json.dumps(options, sort_keys=True, default=str, indent=2),
+                'options_hash': options_hash,
+                'result_format': result_format,
+                'state': 'running',
+                'move_version_at_start': move_version_total,
+            }
+        )
 
     # ----------- audit-log immutability -----------
     # Allow only the lifecycle methods (start_execution + this update)
     # to write. Block direct external writes and any unlink. Cascade
     # FKs on this model are absent, so no parent can erase a row.
-    _EH_INTERNAL_WRITE_FIELDS = frozenset({
-        'state', 'duration_ms', 'row_count', 'result_hash',
-        'result_payload', 'error_message',
-        'served_from_execution_id',  # set on cache-hit row to point at source
-    })
+    _EH_INTERNAL_WRITE_FIELDS = frozenset(
+        {
+            'state',
+            'duration_ms',
+            'row_count',
+            'result_hash',
+            'result_payload',
+            'error_message',
+            'served_from_execution_id',  # set on cache-hit row to point at source
+        }
+    )
 
     def write(self, vals):
         # Tamper-evidence: the compliance fields (state, result_hash,
@@ -203,21 +211,20 @@ class EhAccountReportExecution(models.Model):
         # a historical row, defeating the "append-only, hashed" promise. Now
         # EVERY non-superuser write must carry the internal context flag that
         # only complete_execution / fail_execution / the cache-hit writer set.
-        if not self.env.su and not self.env.context.get(
-                'eh_internal_audit_write'):
-            raise UserError(_(
-                "Report execution audit rows are append-only and may only be "
-                "written by the reporting engine. Forbidden field(s): %s",
-            ) % ', '.join(sorted(vals)))
+        if not self.env.su and not self.env.context.get('eh_internal_audit_write'):
+            raise UserError(
+                _(
+                    "Report execution audit rows are append-only and may only be "
+                    "written by the reporting engine. Forbidden field(s): %s",
+                )
+                % ', '.join(sorted(vals))
+            )
         return super().write(vals)
 
     @api.ondelete(at_uninstall=False)
     def _unlink_immutable_audit(self):
         if not self.env.context.get('eh_internal_audit_unlink'):
-            raise UserError(_(
-                "Report execution audit rows cannot be deleted. "
-                "Reason: durable compliance trail."
-            ))
+            raise UserError(_("Report execution audit rows cannot be deleted. " "Reason: durable compliance trail."))
 
     def complete_execution(self, row_count=0, result_hash=None, result_payload=None):
         """Mark this execution as done and record duration based on executed_at.
@@ -230,6 +237,7 @@ class EhAccountReportExecution(models.Model):
             can skip recomputation entirely and return this stored payload.
         """
         import base64
+
         for rec in self:
             duration_ms = self._compute_elapsed_ms(rec)
             vals = {
@@ -249,14 +257,18 @@ class EhAccountReportExecution(models.Model):
         msg = str(error_message)[:8000]
         for rec in self:
             duration_ms = self._compute_elapsed_ms(rec)
-            rec.with_context(eh_internal_audit_write=True).write({
-                'state': 'error',
-                'duration_ms': duration_ms,
-                'error_message': msg,
-            })
+            rec.with_context(eh_internal_audit_write=True).write(
+                {
+                    'state': 'error',
+                    'duration_ms': duration_ms,
+                    'error_message': msg,
+                }
+            )
             _logger.warning(
                 "Report execution failed: report_code=%s execution_id=%s error=%s",
-                rec.report_code, rec.id, msg,
+                rec.report_code,
+                rec.id,
+                msg,
             )
         return True
 
@@ -304,16 +316,18 @@ class EhAccountReportExecution(models.Model):
     # stale no-children payload. unfolded_lines is the load-bearing case
     # (different unfold sets are different payloads); the id-list filters
     # are peers whose order never changes the figures.
-    _ORDER_INSENSITIVE_OPTION_KEYS = frozenset({
-        'unfolded_lines',
-        'company_ids',
-        'journal_ids',
-        'partner_ids',
-        'account_ids',
-        'account_type_ids',
-        'analytic_account_ids',
-        'analytic_plan_ids',
-    })
+    _ORDER_INSENSITIVE_OPTION_KEYS = frozenset(
+        {
+            'unfolded_lines',
+            'company_ids',
+            'journal_ids',
+            'partner_ids',
+            'account_ids',
+            'account_type_ids',
+            'analytic_account_ids',
+            'analytic_plan_ids',
+        }
+    )
 
     @staticmethod
     def _canonicalise_options(options, _key=None):
@@ -328,8 +342,7 @@ class EhAccountReportExecution(models.Model):
         cls = EhAccountReportExecution
         if isinstance(options, dict):
             return {
-                k: cls._canonicalise_options(v, _key=k)
-                for k, v in sorted(options.items(), key=lambda kv: str(kv[0]))
+                k: cls._canonicalise_options(v, _key=k) for k, v in sorted(options.items(), key=lambda kv: str(kv[0]))
             }
         if isinstance(options, (list, tuple)):
             items = [cls._canonicalise_options(v) for v in options]
@@ -342,9 +355,7 @@ class EhAccountReportExecution(models.Model):
                     return items
             return items
         if isinstance(options, (set, frozenset)):
-            return sorted(
-                cls._canonicalise_options(v) for v in options
-            )
+            return sorted(cls._canonicalise_options(v) for v in options)
         return options
 
     @staticmethod

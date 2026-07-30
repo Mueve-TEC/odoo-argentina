@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -30,7 +29,6 @@ import logging
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -52,28 +50,28 @@ class EhAuditMixin(models.AbstractModel):
     )
 
     user_id = fields.Many2one(
-        'res.users', required=True, index=True,
+        'res.users',
+        required=True,
+        index=True,
         default=lambda self: self.env.user,
         string="Actor",
         help="User who performed the action this row records.",
     )
     comment = fields.Text(
-        help=(
-            "Free-form note. The only field that stays writable after "
-            "the row is created."
-        ),
+        help=("Free-form note. The only field that stays writable after " "the row is created."),
     )
     create_date = fields.Datetime(readonly=True)
 
     def write(self, vals):
         forbidden = set(vals) - set(self._eh_audit_writable_fields)
         if forbidden:
-            raise UserError(_(
-                "%(model)s rows are append-only. Fields blocked: "
-                "%(fields)s",
-                model=self._description,
-                fields=', '.join(sorted(forbidden)),
-            ))
+            raise UserError(
+                _(
+                    "%(model)s rows are append-only. Fields blocked: " "%(fields)s",
+                    model=self._description,
+                    fields=', '.join(sorted(forbidden)),
+                )
+            )
         return super().write(vals)
 
     @api.ondelete(at_uninstall=False)
@@ -85,8 +83,7 @@ class EhCronBatchMixin(models.AbstractModel):
     _name = 'eh.cron.batch.mixin'
     _description = "Per-record savepoint batch helper"
 
-    def _eh_for_each_savepoint(self, records, func, on_error=None,
-                               log_label=None):
+    def _eh_for_each_savepoint(self, records, func, on_error=None, log_label=None):
         """Run func(record) on each record inside its own savepoint.
 
         A single record's failure rolls back only that record's writes
@@ -116,7 +113,9 @@ class EhCronBatchMixin(models.AbstractModel):
             except Exception as exc:  # noqa: BLE001
                 _logger.warning(
                     "%s: batch step failed for %s: %s",
-                    label, record.display_name, exc,
+                    label,
+                    record.display_name,
+                    exc,
                 )
                 failures.append((record.id, exc))
                 if on_error is not None:
@@ -126,6 +125,8 @@ class EhCronBatchMixin(models.AbstractModel):
                     except Exception as exc2:  # noqa: BLE001
                         _logger.error(
                             "%s: error handler also failed for %s: %s",
-                            label, record.display_name, exc2,
+                            label,
+                            record.display_name,
+                            exc2,
                         )
         return failures

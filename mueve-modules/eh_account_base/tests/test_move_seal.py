@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -13,22 +12,22 @@ place; the sanctioned reversal path carries the eh_allow_unpost context flag.
 A move that is NOT sealed (a normal journal entry / invoice) is unaffected.
 """
 
-from odoo.exceptions import UserError
-from odoo.tests import tagged
-
 from odoo.addons.eh_account_base.tests.common import (
     EhAccountIntegrationTestCase,
 )
+from odoo.exceptions import UserError
+from odoo.tests import tagged
 
 
 @tagged('eh_account_base', 'integration', 'post_install', '-at_install')
 class TestMoveSeal(EhAccountIntegrationTestCase):
-
     def _posted_move(self):
-        return self.post_balanced_move([
-            {'account': self.account_expense, 'debit': 100.0},
-            {'account': self.account_cash, 'credit': 100.0},
-        ])
+        return self.post_balanced_move(
+            [
+                {'account': self.account_expense, 'debit': 100.0},
+                {'account': self.account_cash, 'credit': 100.0},
+            ]
+        )
 
     def test_unsealed_move_is_unaffected(self):
         move = self._posted_move()

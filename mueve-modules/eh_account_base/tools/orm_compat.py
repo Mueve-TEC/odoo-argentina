@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -31,7 +30,9 @@ def grouped_sum(model, domain, groupby_field, sum_field):
     """
     if _NEW_READ_GROUP:
         rows = model._read_group(
-            domain, [groupby_field], ['%s:sum' % sum_field],
+            domain,
+            [groupby_field],
+            ['%s:sum' % sum_field],
         )
         out = []
         for group_value, total in rows:
@@ -40,7 +41,9 @@ def grouped_sum(model, domain, groupby_field, sum_field):
         return out
     # Odoo 16 old API.
     rows = model.read_group(
-        domain, ['%s:sum' % sum_field], [groupby_field],
+        domain,
+        ['%s:sum' % sum_field],
+        [groupby_field],
     )
     out = []
     for row in rows:

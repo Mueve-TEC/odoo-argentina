@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -20,7 +19,6 @@ from .common import EhAccountUnitTestCase
 
 @tagged('eh_account_base', 'unit')
 class TestPrivilegeGroups(EhAccountUnitTestCase):
-
     def test_privilege_record_exists(self):
         privilege = self.env.ref(
             'eh_account_base.privilege_eh_accounting',
@@ -48,14 +46,20 @@ class TestPrivilegeGroups(EhAccountUnitTestCase):
         eh_manager = self.env.ref('eh_account_base.group_eh_manager')
         with self.env.cr.savepoint():
             try:
-                user = self.env['res.users'].with_context(
-                    default_group_rfq='default',
-                    mail_create_nosubscribe=True,
-                ).create({
-                    'name': 'EH Manager Test',
-                    'login': 'eh_mgr_test_user',
-                    'group_ids': [(6, 0, [eh_manager.id])],
-                })
+                user = (
+                    self.env['res.users']
+                    .with_context(
+                        default_group_rfq='default',
+                        mail_create_nosubscribe=True,
+                    )
+                    .create(
+                        {
+                            'name': 'EH Manager Test',
+                            'login': 'eh_mgr_test_user',
+                            'group_ids': [(6, 0, [eh_manager.id])],
+                        }
+                    )
+                )
             except Exception as exc:
                 # Enterprise's ai_fields._create override sometimes
                 # strips defaults applied at the partner.create
@@ -65,9 +69,7 @@ class TestPrivilegeGroups(EhAccountUnitTestCase):
                 # already exercised in setUp (group_ids -> implied)
                 # and other tests; skip when the env mishandles the
                 # cascade defaults.
-                self.skipTest(
-                    f"environment cannot create test user: {exc}"
-                )
+                self.skipTest(f"environment cannot create test user: {exc}")
                 return
         self.assertTrue(
             user.has_group('eh_account_base.group_eh_manager'),

@@ -1,4 +1,2 @@
-from . import models
-from . import tools
-
+from . import models, tools
 from .hooks import post_init_hook

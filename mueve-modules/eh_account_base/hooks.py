@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -35,52 +34,58 @@ def post_init_hook(env):
     """
     _ensure_partner(env)
     user_group = env.ref(
-        'eh_account_base.group_eh_user', raise_if_not_found=False,
+        'eh_account_base.group_eh_user',
+        raise_if_not_found=False,
     )
     manager_group = env.ref(
-        'eh_account_base.group_eh_manager', raise_if_not_found=False,
+        'eh_account_base.group_eh_manager',
+        raise_if_not_found=False,
     )
     auditor_group = env.ref(
-        'eh_account_base.group_eh_auditor', raise_if_not_found=False,
+        'eh_account_base.group_eh_auditor',
+        raise_if_not_found=False,
     )
     if not user_group or not manager_group:
-        _logger.warning(
-            "eh_account_base post_init: privilege groups not found, "
-            "skipping auto-promotion."
-        )
+        _logger.warning("eh_account_base post_init: privilege groups not found, " "skipping auto-promotion.")
         return
 
     upstream_user = env.ref(
-        'account.group_account_user', raise_if_not_found=False,
+        'account.group_account_user',
+        raise_if_not_found=False,
     )
     upstream_manager = env.ref(
-        'account.group_account_manager', raise_if_not_found=False,
+        'account.group_account_manager',
+        raise_if_not_found=False,
     )
 
     Users = env['res.users'].sudo()
 
     # Promote every account.group_account_user member to group_eh_user.
     if upstream_user:
-        candidates = Users.search([
-            ('group_ids', 'in', upstream_user.id),
-        ])
+        candidates = Users.search(
+            [
+                ('group_ids', 'in', upstream_user.id),
+            ]
+        )
         if candidates:
             user_group.sudo().write({'user_ids': [(4, u.id) for u in candidates]})
             _logger.info(
-                "eh_account_base post_init: promoted %d users to "
-                "group_eh_user.", len(candidates),
+                "eh_account_base post_init: promoted %d users to " "group_eh_user.",
+                len(candidates),
             )
 
     # Promote every account.group_account_manager member to group_eh_manager.
     if upstream_manager:
-        candidates = Users.search([
-            ('group_ids', 'in', upstream_manager.id),
-        ])
+        candidates = Users.search(
+            [
+                ('group_ids', 'in', upstream_manager.id),
+            ]
+        )
         if candidates:
             manager_group.sudo().write({'user_ids': [(4, u.id) for u in candidates]})
             _logger.info(
-                "eh_account_base post_init: promoted %d users to "
-                "group_eh_manager.", len(candidates),
+                "eh_account_base post_init: promoted %d users to " "group_eh_manager.",
+                len(candidates),
             )
 
     # Always include admin (uid 2) so a brand-new tenant has at least
@@ -91,9 +96,7 @@ def post_init_hook(env):
         manager_group.sudo().write({'user_ids': [(4, admin.id)]})
         if auditor_group:
             auditor_group.sudo().write({'user_ids': [(4, admin.id)]})
-        _logger.info(
-            "eh_account_base post_init: ensured admin is in EH groups."
-        )
+        _logger.info("eh_account_base post_init: ensured admin is in EH groups.")
 
 
 def _ensure_partner(env):
@@ -103,9 +106,14 @@ def _ensure_partner(env):
     if Partner.search([('email', '=', 'info@erpheritage.com.au')], limit=1):
         return
     country = env.ref('base.au', raise_if_not_found=False)
-    state = env['res.country.state'].search(
-        [('code', '=', 'VIC'), ('country_id', '=', country.id)], limit=1,
-    ) if country else env['res.country.state'].browse()
+    state = (
+        env['res.country.state'].search(
+            [('code', '=', 'VIC'), ('country_id', '=', country.id)],
+            limit=1,
+        )
+        if country
+        else env['res.country.state'].browse()
+    )
     vals = {
         'name': 'ERP Heritage – Your Odoo Partner',
         'is_company': True,

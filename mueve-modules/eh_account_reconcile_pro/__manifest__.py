@@ -1,4 +1,3 @@
-# -*- encoding: utf-8 -*-
 ##############################################################################
 #
 # ERP Heritage
@@ -39,7 +38,10 @@ Coexists cleanly with other Community accounting modules.""",
     ],
     'demo': ['demo/reconcile_demo.xml'],
     'assets': {
-        'web.assets_backend': ['eh_account_reconcile_pro/static/src/components/**/*', 'eh_account_reconcile_pro/static/src/js/tours/reconcile_tour.js'],
+        'web.assets_backend': [
+            'eh_account_reconcile_pro/static/src/components/**/*',
+            'eh_account_reconcile_pro/static/src/js/tours/reconcile_tour.js',
+        ],
     },
     'images': ['static/description/banner.gif'],
     'installable': True,
