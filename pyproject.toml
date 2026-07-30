@@ -1,0 +1,59 @@
+# pyproject.toml — odoo-argentina (raíz)
+#
+# Config Ruff a nivel raíz del repo odoo-argentina. Cubre los archivos que NO
+# están bajo un subtree con su propio pyproject.toml:
+#   - mueve-modules/        (eh_account_base, l10n_ar_inflation_adjustment, …)
+#   - scripts/, archivos de raíz, oca_dependencies.txt, etc.
+#
+# Los subtrees adhoc-modules/*/ tienen su propio pyproject.toml que replica la
+# template ingadhoc (line-length=120 + pylint disable=all/enable allowlist).
+# Ruff descubre config desde el archivo hacia arriba, así que el de cada
+# subtree tiene precedencia para sus archivos. Esta config raíz sólo aplica
+# donde no hay otra — principalmente mueve-modules/.
+#
+# line-length=120 es el convenio ingadhoc/OCA-actual; alinea ruff-format con
+# --max-line-length=120 del hook pylint_odoo (ver .pre-commit-config.yaml) de
+# modo que C0301 no dispare falsos positivos en el rango 100–120.
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long — delegado a ruff-format + pylint C0301
+    "E712",  # equality comparisons to False (común en Odoo)
+    "E722",  # bare except (común en código legacy)
+    "E731",  # lambda assignment
+    "E741",  # ambiguous variable name
+    "UP008", # super() instead of super(__class__, self) (no autofix seguro)
+    "UP031", # percent-format (no autofix)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "I001"]
+"__manifest__.py" = ["E", "F", "W"]
+"migrations/*" = ["E", "F", "W"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+known-third-party = [
+    "dateutil",
+    "pkg_resources",
+    "psycopg2",
+    "requests",
+    "setuptools",
+    "yaml",
+]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.format]
+quote-style = "preserve"

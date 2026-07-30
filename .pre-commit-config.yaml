@@ -84,6 +84,18 @@ repos:
     rev: v9.1.3
     hooks:
       - id: pylint_odoo
+        args:
+          # E0401 (import-error): deps no instalados en el entorno de lint
+          # (openpyxl, zeep, pyafipws, ...). Los subtrees adhoc ya excluyen
+          # esto vía su pyproject.toml (disable=all + enable allowlist); estos
+          # args cubren mueve-modules/ que no tiene config propia.
+          - --disable=E0401
+          # C0301 (line-too-long): alineado con ruff line-length=120 (ver
+          # pyproject.toml). ruff-format envuelve líneas >120 cuando puede
+          # (calls, dicts, imports); para strings/comentarios largos que ruff
+          # no puede envolver, pylint seguirá marcando >120 — esos casos
+          # requieren wrap manual. Resuelve el caso 113/100.
+          - --max-line-length=120
 
   - repo: https://github.com/rstcheck/rstcheck
     rev: v6.2.1
