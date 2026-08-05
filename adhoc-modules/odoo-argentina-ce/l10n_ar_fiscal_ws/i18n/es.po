@@ -713,11 +713,6 @@ msgid "Update Automatically"
 msgstr ""
 
 #. module: l10n_ar_afipws
-#: model:ir.model.fields,field_description:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__update_constancia
-msgid "Update Constancia"
-msgstr ""
-
-#. module: l10n_ar_afipws
 #: model_terms:ir.ui.view,arch_db:l10n_ar_afipws.view_base_partner_update_from_padron_form
 msgid "Update From Padron AFIP"
 msgstr ""
