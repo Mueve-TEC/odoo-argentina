@@ -204,7 +204,6 @@ class ResCompany(models.Model):
             }
         )
         connection = self.env["arcaws.connection"].create(auth_data)
-        self.env.cr.commit()  # pylint: disable=invalid-commit
         return connection
 
     def _arca_parse_login(self, response):

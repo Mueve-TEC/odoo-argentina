@@ -10,8 +10,6 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools import float_repr
 
-base64.encodestring = base64.encodebytes
-
 _logger = logging.getLogger(__name__)
 
 
@@ -174,7 +172,7 @@ class AccountMove(models.Model):
                         rec.commercial_partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
                     )
                     qr_dict["nroDocRec"] = int(rec.commercial_partner_id.vat.replace("-", "").replace(".", ""))
-                qr_data = base64.encodestring(json.dumps(qr_dict, indent=None).encode("ascii")).decode("ascii")
+                qr_data = base64.encodebytes(json.dumps(qr_dict, indent=None).encode("ascii")).decode("ascii")
                 qr_data = str(qr_data).replace("\n", "")
                 rec.afip_qr_code = "https://www.afip.gob.ar/fe/qr/?p=%s" % qr_data
             else:
@@ -308,7 +306,6 @@ class AccountMove(models.Model):
                     "afip_xml_response": response["afip_xml_response"],
                 }
                 inv.sudo().write(vals)
-                inv.env.cr.commit()
                 continue
 
             _logger.info(
@@ -326,9 +323,10 @@ class AccountMove(models.Model):
             }
 
             inv.sudo().write(vals)
+            # El CAE es irrevocable: una vez obtenido de ARCA, si una factura
+            # hermana del mismo lote falla después, no queremos que este
+            # write se revierta (el reintento consumiría un segundo CAE).
             inv.env.cr.commit()
-            # si obtuvimos el cae hacemos el commit porque estoya no se puede
-            # volver atras
             a_invoices += inv
         return (a_invoices, r_invoices)
 
