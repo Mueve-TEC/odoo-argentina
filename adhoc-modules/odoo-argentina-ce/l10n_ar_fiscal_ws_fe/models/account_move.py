@@ -335,11 +335,15 @@ class AccountMove(models.Model):
     def get_pyafipws_currency_rate(self):
         self.ensure_one()
         arcaws = self.journal_id.arcaws
-        ws = self.company_id.get_connection(arcaws).connect()
-        afipws_get_currency_rate = self.pyafipws_get_currency_rate(ws)
+        if not arcaws:
+            raise UserError(_("No ARCA web service configured on the invoice's journal."))
+        method_id = arcaws.method_ids.filtered(lambda m: m.name == "get_currency_rate")
+        if not method_id:
+            raise UserError(_("Currency rate method is not configured for ARCA WS '%s'.") % arcaws.code)
+        rate = method_id.call_arca_method(obj=self)
         # TODO: crear cotizacion?
-        self.invoice_currency_rate = 1 / float(afipws_get_currency_rate)
-        self.message_post(body=_("AFIP currency rate: %s") % afipws_get_currency_rate)
+        self.invoice_currency_rate = 1 / float(rate)
+        self.message_post(body=_("AFIP currency rate: %s") % rate)
 
     def l10n_ar_arca_ws_parse_observations(self, observations):
         """
