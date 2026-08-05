@@ -422,9 +422,33 @@ class ResPartner(models.Model):
         vals = self.parse_census_vals(census_data)
         return vals
 
+    def _get_padron_homologation_warning(self):
+        """Return a warning message when the padrón service would run against homologation certs.
+
+        The ARCA padrón web service is not reliable in the homologation
+        environment: it returns incomplete data, wrong responsibility states
+        (e.g. 'Consumidor Final') or empty fields. When no warning applies,
+        returns False.
+        """
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        if company._get_environment_type() == "homologation":
+            return _(
+                "Estás por usar el servicio de Padrón ARCA con certificados de "
+                "homologación.\n\nEl padrón de ARCA no es confiable en "
+                "homologación: puede devolver datos incompletos, "
+                "responsabilidades erróneas (por ejemplo 'Consumidor Final') o "
+                "campos vacíos. Se recomienda usar el entorno de producción con "
+                "certificados reales."
+            )
+        return False
+
     def update_from_padron_arca(self):
         """Actualiza el partner desde el Padrón ARCA sin wizard."""
         self.ensure_one()
+        warning = self._get_padron_homologation_warning()
+        if warning:
+            raise UserError(warning)
         try:
             partner_vals = self.get_data_from_padron_arca()
             self.write(partner_vals)
@@ -461,6 +485,10 @@ class ResPartner(models.Model):
         Filtra partners con CUIT válido, agrupa en lotes y consulta
         el Padrón A5 de manera masiva.
         """
+        warning = self[:1]._get_padron_homologation_warning()
+        if warning:
+            raise UserError(warning)
+
         # Filtrar partners con CUIT válido (tipo 80)
         partners_with_cuit = self.filtered(
             lambda p: p.vat

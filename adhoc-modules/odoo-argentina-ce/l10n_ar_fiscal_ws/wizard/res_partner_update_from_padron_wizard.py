@@ -158,6 +158,7 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         partner = self.partner_id
         fields_names = self.field_to_update_ids.mapped("name")
         if partner:
+            warning = partner._get_padron_homologation_warning()
             partner_vals = partner.get_data_from_padron_arca()
             _logger.info(
                 "=== Datos ARCA para %s ===\n" "Campos disponibles: %s\n" "Campos seleccionados: %s\n" "Valores: %s",
@@ -226,6 +227,14 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                         }
                         lines.append((0, False, line_vals))
             self.field_ids = lines
+            if warning:
+                return {
+                    "warning": {
+                        "title": _("Padrón ARCA en homologación"),
+                        "message": warning,
+                    }
+                }
+        return {}
 
     def _update(self):
         self.ensure_one()
