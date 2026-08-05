@@ -63,7 +63,7 @@ class ResPartner(models.Model):
 
     # Separo esto para poder heredar de otros
     # modulos y extender los datos
-    def parse_census_vals(self, census):
+    def parse_census_vals(self, census):  # noqa: C901
         """Parse census data from ARCA Padrón A5.
 
         Args:
@@ -92,12 +92,19 @@ class ResPartner(models.Model):
             # por ej. monotributista devuelve N
             imp_iva = "NI"
 
-        vals = {
-            "street": get_value(census, "direccion"),
-            "city": get_value(census, "localidad"),
-            "zip": get_value(census, "cod_postal"),
-            "last_update_census": fields.Date.today(),
-        }
+        vals = {"last_update_census": fields.Date.today()}
+
+        # Solo incluir street/city/zip si ARCA devolvió un valor: así un
+        # domicilio incompleto no pisa los datos ya cargados del partner.
+        direccion = get_value(census, "direccion")
+        if direccion:
+            vals["street"] = direccion
+        localidad = get_value(census, "localidad")
+        if localidad:
+            vals["city"] = localidad
+        cod_postal = get_value(census, "cod_postal")
+        if cod_postal:
+            vals["zip"] = cod_postal
 
         # Solo incluir 'name' si denominacion tiene un valor válido
         denominacion = get_value(census, "denominacion")
@@ -422,6 +429,23 @@ class ResPartner(models.Model):
         vals = self.parse_census_vals(census_data)
         return vals
 
+    def _raise_if_arca_errors(self, persona_data, cuit):
+        """Raise UserError when ARCA returned errors for a persona.
+
+        Mirrors pyafipws WSSrPadronA5 (which extends self.errores from these
+        three keys) so the real ARCA reason is shown instead of a misleading
+        'no devolvió datos' error.
+        """
+        if not isinstance(persona_data, dict):
+            return
+        errors = []
+        for key in ("errorConstancia", "errorMonotributo", "errorRegimenGeneral"):
+            error = persona_data.get(key)
+            if error:
+                errors.append(str(error.get("error") if isinstance(error, dict) else error))
+        if errors:
+            raise UserError(_("ARCA reportó errores para el CUIT %s:\n%s") % (cuit, "\n".join(errors)))
+
     def _get_padron_homologation_warning(self):
         """Return a warning message when the padrón service would run against homologation certs.
 
@@ -559,6 +583,10 @@ class ResPartner(models.Model):
                             error_details.append(_(msg) % partner_cuit)
                             continue
 
+                        # Arca puede devolver errores por persona (p.ej. RG
+                        # 4280/18 domicilio fiscal electrónico pendiente)
+                        partner._raise_if_arca_errors(persona_data, partner_cuit)
+
                         # Transformar y parsear usando método auxiliar
                         vals = partner._transform_and_parse_persona_data(persona_data)
                         # Actualizar sin tracking para evitar diálogos confusos
@@ -655,6 +683,7 @@ class ResPartner(models.Model):
 
             # Validar y serializar respuesta (single=True retorna directamente)
             persona_data = self._validate_and_serialize_arca_response(res, cuit, single=True)
+            self._raise_if_arca_errors(persona_data, cuit)
 
             # Validación adicional: ARCA en homologación puede devolver estructura vacía
             if not persona_data or not isinstance(persona_data, dict):
