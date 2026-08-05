@@ -728,14 +728,21 @@ class ResPartner(models.Model):
             raise UserError(error_msg % (self.name, cuit, str(e))) from e
 
     def l10n_ar_fiscal_ws_fe_min_ammount(self):
-        for record in self:
-            if record.l10n_ar_vat:
-                ws = self.env.company.arca_get_connection("wsfecred")
-                res = ws.call_arca_service(
-                    "ConsultarMontoObligadoRecepcion",
-                    {
-                        "cuitConsultada": record.l10n_ar_vat,
-                        "fechaEmision": fields.Date.today(),
-                    },
-                )
-                return res
+        """Return the amount from which the partner must receive MiPyME credit invoices."""
+        self.ensure_one()
+        if not self.l10n_ar_vat:
+            return
+        arcaws = self.env["arcaws"].search([("code", "=", "wsfecred")], limit=1)
+        if not arcaws:
+            raise UserError(_("No se encontró configuración del servicio wsfecred"))
+        method_id = arcaws.method_ids.filtered(lambda m: m.name == "get_monto_obligado_recepcion")
+        if not method_id:
+            raise UserError(_("No se encontró el método get_monto_obligado_recepcion configurado"))
+        method_id.ensure_one()
+        return method_id.call_arca_method(
+            obj=self,
+            extra_values={
+                "cuit": self.l10n_ar_vat,
+                "fecha_emision": fields.Date.today(),
+            },
+        )

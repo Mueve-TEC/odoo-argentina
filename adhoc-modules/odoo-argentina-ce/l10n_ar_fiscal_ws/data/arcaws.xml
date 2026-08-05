@@ -62,4 +62,19 @@
         <field name="response_dict"></field>
     </record>
 
+    <!-- wsfecred: monto obligado a recepción de factura de crédito MiPyME -->
+    <record id="arcawsfecred_method_get_monto" model="arcaws.method">
+        <field name="name">get_monto_obligado_recepcion</field>
+        <field name="arcaws_id" ref="arcawsfecred"/>
+        <field name="method_name">ConsultarMontoObligadoRecepcion</field>
+        <field name="definition_dict">{
+    "token": connection.token,
+    "sign": connection.sign,
+    "cuitRepresentada": int(company_id.partner_id.ensure_vat()),
+    "cuitConsultada": int(extra_values["cuit"]),
+    "fechaEmision": extra_values["fecha_emision"].strftime("%Y-%m-%d"),
+}</field>
+        <field name="response_dict">result = ws_res</field>
+    </record>
+
 </odoo>
