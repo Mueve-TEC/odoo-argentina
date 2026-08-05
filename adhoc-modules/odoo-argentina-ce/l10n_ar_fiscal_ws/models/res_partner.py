@@ -116,22 +116,26 @@ class ResPartner(models.Model):
 
         # Intentar determinar tipo de responsabilidad ARCA basado
         # en IVA y monotributo. Solo si el campo existe en el modelo
-        # (puede estar en l10n_ar u otro módulo)
+        # (puede estar en l10n_ar u otro módulo).
+        # Nota: "N" se normaliza a "NI" arriba, por lo que aquí
+        # imp_iva solo puede ser "AC", "EX" o "NI".
         partner_fields = self.env["res.partner"]._fields
         if partner_fields.get("l10n_ar_afip_responsibility_type_id"):
             try:
                 if imp_iva == "NI" and monotributo == "S":
-                    resp_type = self.env.ref("l10n_ar.res_RM").id
-                    vals["l10n_ar_afip_responsibility_type_id"] = resp_type
+                    # Monotributista
+                    vals["l10n_ar_afip_responsibility_type_id"] = self.env.ref("l10n_ar.res_RM").id
                 elif imp_iva == "AC":
-                    resp_type = self.env.ref("l10n_ar.res_IVARI").id
-                    vals["l10n_ar_afip_responsibility_type_id"] = resp_type
+                    # Responsable Inscripto IVA
+                    vals["l10n_ar_afip_responsibility_type_id"] = self.env.ref("l10n_ar.res_IVARI").id
                 elif imp_iva == "EX":
-                    resp_type = self.env.ref("l10n_ar.res_IVAE").id
-                    vals["l10n_ar_afip_responsibility_type_id"] = resp_type
+                    # IVA Exento
+                    vals["l10n_ar_afip_responsibility_type_id"] = self.env.ref("l10n_ar.res_IVAE").id
+                elif imp_iva == "NI":
+                    # No inscripto y no monotributista → Consumidor Final
+                    vals["l10n_ar_afip_responsibility_type_id"] = self.env.ref("l10n_ar.res_CF").id
             except (ValueError, UserError, KeyError, AttributeError) as e:
-                msg = "No se pudo establecer tipo de responsabilidad ARCA: %s"
-                _logger.warning(msg, e)
+                _logger.warning("No se pudo establecer tipo de responsabilidad ARCA: %s", e)
             except Exception:
                 _logger.exception("Unexpected error al establecer tipo de responsabilidad ARCA")
                 raise
@@ -225,12 +229,18 @@ class ResPartner(models.Model):
         # Determinar si está inscripto en IVA (impuesto 30)
         imp_iva = "S" if any(imp.get("idImpuesto") == 30 for imp in impuestos_list if isinstance(imp, dict)) else "N"
 
+        # Determinar monotributo: requerimos categoría no vacía y estado activo
+        # (un monotributo cancelado puede conservar el atributo pero inactivo)
+        categoria_mt = datos_monotributo.get("categoriaMonotributo") or ""
+        estado_mt = datos_monotributo.get("estadoMonotributo") or ""
+        monotributo = "S" if (categoria_mt and estado_mt in ("ACTIVO", "AC")) else "N"
+
         result = {
             "direccion": domicilio.get("direccion", ""),
             "localidad": domicilio.get("localidad", ""),
             "cod_postal": domicilio.get("codPostal", ""),
             "provincia": domicilio.get("descripcionProvincia", ""),
-            "monotributo": datos_monotributo.get("actividadMonotributista", "N"),
+            "monotributo": monotributo,
             "imp_iva": imp_iva,
             "tipoPersona": datos_generales.get("tipoPersona", ""),
         }
@@ -484,10 +494,10 @@ class ResPartner(models.Model):
         else:
             title = _("✗ Error en la actualización")
             message = _("No se pudo actualizar ningún contacto.\nErrores encontrados:\n\n%s") % "\n".join(
-                error_details[:10]
+                error_details[: self._PADRON_MAX_ERRORS_TO_SHOW]
             )
-            if len(error_details) > 10:
-                message += _("\n... y %d errores más") % (len(error_details) - 10)
+            if len(error_details) > self._PADRON_MAX_ERRORS_TO_SHOW:
+                message += _("\n... y %d errores más") % (len(error_details) - self._PADRON_MAX_ERRORS_TO_SHOW)
             msg_type = "danger"
             sticky = True
 
@@ -583,7 +593,7 @@ class ResPartner(models.Model):
                 cuit,
                 e,
             )
-            raise UserError(error_msg % (self.name, cuit, str(e)))
+            raise UserError(error_msg % (self.name, cuit, str(e))) from e
 
     def l10n_ar_fiscal_ws_fe_min_ammount(self):
         for record in self:

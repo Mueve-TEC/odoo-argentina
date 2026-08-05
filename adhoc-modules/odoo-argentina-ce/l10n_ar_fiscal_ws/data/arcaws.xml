@@ -45,5 +45,21 @@
         <field name="response_dict"></field>
     </record>
 
+    <!-- wsfecred: Factura de Crédito Electrónica (MiPyME) -->
+    <!-- URLs corregidas según PR #8 (production -> serviciosjava, homologation -> fwshomo) -->
+    <record id="arcawsfecred" model="arcaws">
+        <field name="name">Factura crédito electrónica</field>
+        <field name="code">wsfecred</field>
+        <field name="ws_parameters" eval="{'dummy_method': 'dummy'}"></field>
+        <field name="production_url">https://serviciosjava.afip.gob.ar/wsfecred/FECredService?WSDL</field>
+        <field name="homologation_url">https://fwshomo.afip.gov.ar/wsfecred/FECredService?WSDL</field>
+    </record>
+    <record id="arcawsfecred_method_dummy" model="arcaws.method">
+        <field name="name">dummy</field>
+        <field name="arcaws_id" ref="arcawsfecred"/>
+        <field name="method_name">dummy</field>
+        <field name="definition_dict">{}</field>
+        <field name="response_dict"></field>
+    </record>
 
 </odoo>
