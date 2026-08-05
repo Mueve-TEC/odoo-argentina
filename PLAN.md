@@ -5,6 +5,11 @@
 > ingadhoc repos, plus a small helper script and workflow docs. The **supermodule**
 > (`soltec-localdev-odoo19`) is **out of scope** here.
 >
+> **Post-script (later addition):** a **fifth** upstream subtree,
+> `adhoc-modules/account-invoicing` (ingadhoc `account-invoicing`, branch `19.0`),
+> was added afterwards to provide `account_background_post` (a dependency of the
+> vendored `account_ux`) — see the "5th subtree" note in Step 3.
+>
 > **Target executor:** another LLM / developer with write access to
 > `Mueve-TEC/odoo-argentina`. Read this whole file once before running anything.
 
@@ -140,9 +145,17 @@ that repo.
 
 ### 3.1 Sanity-check the result
 
+> **5th subtree (added later, after this plan's steps ran):**
+> `git subtree add --prefix=adhoc-modules/account-invoicing https://github.com/ingadhoc/account-invoicing.git 19.0 --squash`
+> (squash add, matching `pull-upstream.sh`). Motivación: el `account_ux` ya
+> vendido depende de `account_background_post`, que no estaba disponible en el
+> árbol; `account-invoicing` lo aporta. Todos sus módulos dependen solo de
+> módulos Community (`account`, `sale`, `website_sale`,
+> `l10n_latam_invoice_document`, `account_ux`).
+
 ```bash
-ls adhoc-modules          # => 4 dirs: odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools
-git log --oneline -12     # should show 4 "Merge commit … as 'adhoc-modules/…'" pairs on top of the [REF] drop commit
+ls adhoc-modules          # => 5 dirs: odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools, account-invoicing
+git log --oneline -12     # should show "Merge commit … as 'adhoc-modules/…'" pairs on top of the [REF] drop commit
 # Confirm a known module is present in each:
 ls adhoc-modules/odoo-argentina            | head
 ls adhoc-modules/odoo-argentina-ce         | head
@@ -235,7 +248,7 @@ de cualquiera de ellos:
 
 ```bash
 ./scripts/pull-upstream.sh <nombre>
-# <nombre> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools }
+# <nombre> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools, account-invoicing }
 ```
 
 Esto ejecuta `git subtree pull --squash`, produciendo un par

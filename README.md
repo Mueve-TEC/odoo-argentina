@@ -12,6 +12,7 @@ Localización Argentina para Odoo Community Edition 19. Esta versión está basa
   `l10n_ar_reports` aún no están migrados en esta rama.)
 - [account-payment](https://github.com/ingadhoc/account-payment/tree/19.0)
 - [account-financial-tools](https://github.com/ingadhoc/account-financial-tools/tree/19.0)
+- [account-invoicing](https://github.com/ingadhoc/account-invoicing/tree/19.0)
 
 Además, en el directorio `mueve-modules` se incluye los módulos desarrollados por Mueve.
 
@@ -34,7 +35,7 @@ upstream de Ingeniería ADHOC. Para traer la última versión de cada uno:
 
 ```bash
 ./scripts/pull-upstream.sh <nombre>
-# <nombre> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools }
+# <nombre> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools, account-invoicing }
 ```
 
 La rama a sincronizar está configurada por repositorio en
