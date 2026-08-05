@@ -105,13 +105,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         ]
 
     @api.model
-    def _get_default_title_case(self):
-        parameter = self.env["ir.config_parameter"].sudo().get_param("use_title_case_on_padron_afip")
-        if parameter == "False" or parameter == "0":
-            return False
-        return True
-
-    @api.model
     def get_fields(self):
         return self.env["ir.model.fields"].search(self._get_domain())
 
@@ -145,10 +138,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
     )
     update_constancia = fields.Boolean(
         default=True,
-    )
-    title_case = fields.Boolean(
-        help="Converts retreived text fields to Title Case.",
-        default=_get_default_title_case,
     )
     field_to_update_ids = fields.Many2many(
         "ir.model.fields",
@@ -184,8 +173,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                 new_value = partner_vals[key]
                 if new_value == "":
                     new_value = False
-                if self.title_case and key in ("name", "city", "street"):
-                    new_value = new_value and new_value.title()
 
                 # Manejar campos Many2one para mostrar nombre en lugar de ID
                 if key in ("state_id", "l10n_ar_afip_responsibility_type_id"):

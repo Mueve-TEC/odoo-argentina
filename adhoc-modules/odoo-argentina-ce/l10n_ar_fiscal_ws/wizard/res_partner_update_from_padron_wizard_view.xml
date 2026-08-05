@@ -24,7 +24,6 @@
                     <group invisible="state not in ('option',)">
                         <field name="field_to_update_ids" options="{'no_create': True}" widget="many2many_tags"/>
                         <field name="update_constancia"/>
-                        <field name="title_case"/>
                     </group>
                     <group invisible="state in ('option', 'finished')">
                         <group col="1">

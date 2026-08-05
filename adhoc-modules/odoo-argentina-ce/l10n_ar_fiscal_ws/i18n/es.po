@@ -290,11 +290,6 @@ msgid "Contact"
 msgstr "Contacto"
 
 #. module: l10n_ar_afipws
-#: model:ir.model.fields,help:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__title_case
-msgid "Converts retreived text fields to Title Case."
-msgstr ""
-
-#. module: l10n_ar_afipws
 #: code:addons/l10n_ar_afipws/models/res_company.py:0
 #, python-format
 msgid "Could not connect. This is the what we received: %s"
@@ -676,11 +671,6 @@ msgstr ""
 msgid ""
 "Tiene más de un certificado de \"%s\" confirmado. Por favor deje un solo "
 "certificado de \"%s\" confirmado."
-msgstr ""
-
-#. module: l10n_ar_afipws
-#: model:ir.model.fields,field_description:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__title_case
-msgid "Title Case"
 msgstr ""
 
 #. module: l10n_ar_afipws
