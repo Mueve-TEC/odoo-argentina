@@ -80,7 +80,6 @@ class ResPartner(models.Model):
         # padron.idProvincia
         monotributo = get_value(census, "monotributo", "N")
         provincia = get_value(census, "provincia")
-        localidad = get_value(census, "localidad")
 
         if provincia:
             # CABA puede tener diferentes códigos según la base de datos
@@ -90,8 +89,9 @@ class ResPartner(models.Model):
             caba_names = ["CAPITAL", "CIUDAD AUTONOMA", "CABA", "C.A.B.A"]
             is_caba = any(caba_name in provincia_upper for caba_name in caba_names)
 
-            # Si no hay localidad y la provincia es CABA, establecer CABA
-            if not localidad and is_caba:
+            state = False
+            if is_caba:
+                # CABA: siempre buscar por código, sin excluir caba_codes
                 state = self.env["res.country.state"].search(
                     [
                         ("code", "in", caba_codes),
@@ -99,10 +99,10 @@ class ResPartner(models.Model):
                     ],
                     limit=1,
                 )
-                if state:
-                    vals["city"] = "Ciudad Autónoma de Buenos Aires"
-            # Para provincias con localidad (o sin localidad si no es CABA)
-            elif localidad or not is_caba:
+                # ARCA devuelve el barrio en 'localidad', no la ciudad
+                vals["city"] = "Ciudad Autónoma de Buenos Aires"
+            else:
+                # Resto del país: buscar provincia por nombre
                 state = self.env["res.country.state"].search(
                     [
                         ("name", "ilike", provincia),
@@ -222,18 +222,34 @@ class ResPartner(models.Model):
         if not isinstance(datos_regimen, dict):
             datos_regimen = {}
 
-        impuestos_list = datos_regimen.get("impuesto") or []
-        if not isinstance(impuestos_list, list):
-            impuestos_list = []
+        # Extraer impuestos como pyafipws.WSSrPadronA5: unión de
+        # datosMonotributo.impuesto + datosRegimenGeneral.impuesto.
+        # zeep serializa arrays de un solo elemento como un dict, no como lista.
+        def _as_list(v):
+            if isinstance(v, dict):
+                return [v]
+            if isinstance(v, list):
+                return v
+            return []
 
-        # Determinar si está inscripto en IVA (impuesto 30)
-        imp_iva = "S" if any(imp.get("idImpuesto") == 30 for imp in impuestos_list if isinstance(imp, dict)) else "N"
+        impuestos_raw = _as_list(datos_monotributo.get("impuesto", [])) + _as_list(datos_regimen.get("impuesto", []))
+        impuestos_ids = [imp["idImpuesto"] for imp in impuestos_raw if isinstance(imp, dict) and "idImpuesto" in imp]
 
-        # Determinar monotributo: requerimos categoría no vacía y estado activo
-        # (un monotributo cancelado puede conservar el atributo pero inactivo)
-        categoria_mt = datos_monotributo.get("categoriaMonotributo") or ""
-        estado_mt = datos_monotributo.get("estadoMonotributo") or ""
-        monotributo = "S" if (categoria_mt and estado_mt in ("ACTIVO", "AC")) else "N"
+        # Mapeo idImpuesto → imp_iva (espejo de pyafipws.analizar_datos)
+        if 32 in impuestos_ids:
+            imp_iva = "EX"
+        elif 33 in impuestos_ids:
+            imp_iva = "NI"
+        elif 34 in impuestos_ids:
+            imp_iva = "NA"
+        elif 30 in impuestos_ids:
+            imp_iva = "S"
+        else:
+            imp_iva = "N"
+
+        # Monotributo (A5): categoriaMonotributo no vacío → "S" (igual que pyafipws)
+        cat_mt = datos_monotributo.get("categoriaMonotributo") or {}
+        monotributo = "S" if cat_mt else "N"
 
         result = {
             "direccion": domicilio.get("direccion", ""),
