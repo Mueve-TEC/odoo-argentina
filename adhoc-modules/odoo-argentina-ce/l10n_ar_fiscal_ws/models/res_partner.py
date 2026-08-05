@@ -29,6 +29,38 @@ class ResPartner(models.Model):
     _PADRON_BATCH_SIZE = 100  # Límite de ARCA para consultas masivas
     _PADRON_MAX_ERRORS_TO_SHOW = 10  # Mostrar primeros N errores en UI
 
+    # Mapeo ARCA idProvincia (int) -> código ISO 3166-2:AR de res.country.state
+    # Los códigos de Odoo son letras solas (A, B, C...), coincide con la
+    # subdivisiones oficiales AR-A, AR-B, AR-C, etc.Usado para matching exacto
+    # sin depender de acentos/casing de 'descripcionProvincia' de ARCA
+    # (que viene en mayúsculas y sin acentos: 'CORDOBA', 'TUCUMAN'...).
+    _ARCA_PROVINCIA_ID_TO_CODE = {
+        0: "C",  # Ciudad Autónoma de Buenos Aires
+        1: "B",  # Buenos Aires
+        2: "K",  # Catamarca
+        3: "X",  # Córdoba
+        4: "W",  # Corrientes
+        5: "E",  # Entre Ríos
+        6: "Y",  # Jujuy
+        7: "M",  # Mendoza
+        8: "F",  # La Rioja
+        9: "A",  # Salta
+        10: "J",  # San Juan
+        11: "D",  # San Luis
+        12: "S",  # Santa Fe
+        13: "G",  # Santiago del Estero
+        14: "T",  # Tucumán
+        16: "H",  # Chaco
+        17: "U",  # Chubut
+        18: "P",  # Formosa
+        19: "N",  # Misiones
+        20: "Q",  # Neuquén
+        21: "L",  # La Pampa
+        22: "R",  # Río Negro
+        23: "Z",  # Santa Cruz
+        24: "V",  # Tierra del Fuego
+    }
+
     # Separo esto para poder heredar de otros
     # modulos y extender los datos
     def parse_census_vals(self, census):
@@ -80,18 +112,36 @@ class ResPartner(models.Model):
         # padron.idProvincia
         monotributo = get_value(census, "monotributo", "N")
         provincia = get_value(census, "provincia")
+        provincia_code = get_value(census, "provincia_code", "")
 
-        if provincia:
-            # CABA puede tener diferentes códigos según la base de datos
-            caba_codes = ["C", "CABA", "ABA"]
-            # Detectar si la provincia es CABA por nombre
+        # CABA puede tener diferentes códigos según la base de datos
+        caba_codes = ["C", "CABA", "ABA"]
+
+        # Preferimos matching por código ISO 3166-2:AR (determinista, sin
+        # problemas de acentos). Solo caemos a text-search si ARCA no envió
+        # idProvincia (caso raro/legacy).
+        state = False
+        if provincia_code:
+            state = self.env["res.country.state"].search(
+                [
+                    ("code", "=", provincia_code),
+                    ("country_id.code", "=", "AR"),
+                ],
+                limit=1,
+            )
+            if not state:
+                _logger.warning(
+                    "Provincia ARCA idProvincia=%s (code=%s) no encontrada en "
+                    "res.country.state para AR. Probablemente la base no tiene "
+                    "cargada la provincia con ese código.",
+                    get_value(census, "id_provincia", provincia_code),
+                    provincia_code,
+                )
+        elif provincia:
             provincia_upper = provincia.upper()
             caba_names = ["CAPITAL", "CIUDAD AUTONOMA", "CABA", "C.A.B.A"]
             is_caba = any(caba_name in provincia_upper for caba_name in caba_names)
-
-            state = False
             if is_caba:
-                # CABA: siempre buscar por código, sin excluir caba_codes
                 state = self.env["res.country.state"].search(
                     [
                         ("code", "in", caba_codes),
@@ -99,10 +149,8 @@ class ResPartner(models.Model):
                     ],
                     limit=1,
                 )
-                # ARCA devuelve el barrio en 'localidad', no la ciudad
-                vals["city"] = "Ciudad Autónoma de Buenos Aires"
             else:
-                # Resto del país: buscar provincia por nombre
+                # Fallback: text search (puede fallar con acentos)
                 state = self.env["res.country.state"].search(
                     [
                         ("name", "ilike", provincia),
@@ -111,8 +159,14 @@ class ResPartner(models.Model):
                     ],
                     limit=1,
                 )
-            if state:
-                vals["state_id"] = state.id
+                if not state:
+                    _logger.warning(
+                        "No se encontró provincia '%s' (text-search). "
+                        "ARCA debería enviar idProvincia para matching exacto.",
+                        provincia,
+                    )
+        if state:
+            vals["state_id"] = state.id
 
         # Intentar determinar tipo de responsabilidad ARCA basado
         # en IVA y monotributo. Solo si el campo existe en el modelo
@@ -251,11 +305,16 @@ class ResPartner(models.Model):
         cat_mt = datos_monotributo.get("categoriaMonotributo") or {}
         monotributo = "S" if cat_mt else "N"
 
+        # Mapear idProvincia (int ARCA) a código ISO 3166-2:AR de Odoo
+        id_provincia = domicilio.get("idProvincia")
+        provincia_code = self._ARCA_PROVINCIA_ID_TO_CODE.get(id_provincia, "")
+
         result = {
             "direccion": domicilio.get("direccion", ""),
             "localidad": domicilio.get("localidad", ""),
             "cod_postal": domicilio.get("codPostal", ""),
             "provincia": domicilio.get("descripcionProvincia", ""),
+            "provincia_code": provincia_code,
             "monotributo": monotributo,
             "imp_iva": imp_iva,
             "tipoPersona": datos_generales.get("tipoPersona", ""),
