@@ -1,12 +1,13 @@
+# pylint: disable=missing-module-docstring,pointless-statement
 {
     "name": "Punto de venta Factura Electrónica Argentina",
-    "version": "18.0.1.0.0",
+    "version": "19.0.1.0.0",
     "category": "Localization/Argentina",
     "author": "ADHOC SA, Filoquin",
     "license": "AGPL-3",
     "summary": "",
     "depends": [
-        "l10n_ar_afipws_fe",
+        "l10n_ar_fiscal_ws_fe",
         "point_of_sale",
     ],
     "external_dependencies": {},
@@ -14,7 +15,7 @@
     "demo": [],
     "assets": {},
     "images": [],
-    "installable": False,
+    "installable": True,
     "auto_install": False,
     "application": False,
 }
