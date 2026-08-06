@@ -67,6 +67,14 @@ class ResCompany(models.Model):
             environment_type = "production"
         elif parameter_env_type == "homologation":
             environment_type = "homologation"
+        elif parameter_env_type:
+            # El parámetro existe pero con un valor inválido: mejor fallar
+            # claro que silenciosamente apuntar a producción/homologación
+            # equivocada con los certificados del otro entorno.
+            raise UserError(
+                _("El parámetro 'arcaws.env.type' tiene un valor inválido: " "%r. Use 'production' u 'homologation'.")
+                % parameter_env_type
+            )
         else:
             server_mode = tools.config.get("server_mode")
             if not server_mode or server_mode == "production":
