@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 from odoo.addons.l10n_ar_fiscal_ws.models.arcaws import ArcaWsMethod
+from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -28,3 +29,10 @@ class TestCurrencyRate(TransactionCase):
         with patch.object(ArcaWsMethod, "call_arca_method", return_value=820.5):
             invoice.get_pyafipws_currency_rate()
         self.assertAlmostEqual(invoice.invoice_currency_rate, 1 / 820.5)
+
+    def test_currency_rate_no_rate_raises_user_error(self):
+        """ARCA returning no ResultGet/MonCotiz must not crash (RPC 500)."""
+        invoice = self.env["account.move"].create({"move_type": "out_invoice", "journal_id": self.journal.id})
+        with patch.object(ArcaWsMethod, "call_arca_method", return_value=False):
+            with self.assertRaises(UserError):
+                invoice.get_pyafipws_currency_rate()

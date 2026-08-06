@@ -339,6 +339,8 @@ class AccountMove(models.Model):
         if not method_id:
             raise UserError(_("Currency rate method is not configured for ARCA WS '%s'.") % arcaws.code)
         rate = method_id.call_arca_method(obj=self)
+        if not rate:
+            raise UserError(_("ARCA no devolvió cotización para la moneda %s") % self.currency_id.name)
         # TODO: crear cotizacion?
         self.invoice_currency_rate = 1 / float(rate)
         self.message_post(body=_("AFIP currency rate: %s") % rate)
