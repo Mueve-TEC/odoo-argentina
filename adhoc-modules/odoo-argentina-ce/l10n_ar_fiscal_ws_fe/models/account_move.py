@@ -304,10 +304,11 @@ class AccountMove(models.Model):
             if not response.get("afip_auth_code") or response.get("afip_result") != "A":
                 r_invoices += inv
 
+                _logger.error(_("AFIP Rejected Invoice. %s") % self._l10n_ar_format_arca_error(response))
                 vals = {
                     "name": "/",
                     "afip_result": "R",
-                    "afip_message": self.l10n_ar_arca_ws_parse_observations(response["observations"]),
+                    "afip_message": self._l10n_ar_format_arca_error(response),
                     "afip_xml_request": response["afip_xml_request"],
                     "afip_xml_response": response["afip_xml_response"],
                 }
@@ -323,7 +324,7 @@ class AccountMove(models.Model):
                 "afip_auth_code": response["afip_auth_code"],
                 "afip_auth_code_due": response["afip_auth_code_due"],
                 "afip_result": response["afip_result"],
-                "afip_message": self.l10n_ar_arca_ws_parse_observations(response["observations"]),
+                "afip_message": self._l10n_ar_format_arca_error(response),
                 "afip_xml_request": response["afip_xml_request"],
                 "afip_xml_response": response["afip_xml_response"],
             }
@@ -365,3 +366,24 @@ class AccountMove(models.Model):
                 if obs_code and obs_msg:
                     obs_msgs.append("(%s) %s" % (obs_code, obs_msg))
         return "\n".join(obs_msgs)
+
+    def _l10n_ar_format_arca_error(self, response):
+        """
+        Combine ARCA observations and errors into a single message.
+        ARCA reports rejected CAE requests either as observations on the
+        detail or as a global <Errors> block; both must reach the user.
+        """
+        messages = []
+        observations = self.l10n_ar_arca_ws_parse_observations(response.get("observations"))
+        if observations:
+            messages.append(observations)
+        errors = response.get("afip_errors")
+        if errors:
+            if isinstance(errors, dict):
+                errors = [errors]
+            for error in errors:
+                code = error.get("Code")
+                message = error.get("Msg")
+                if code and message:
+                    messages.append("(%s) %s" % (code, message))
+        return "\n".join(messages)
