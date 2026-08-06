@@ -6,7 +6,7 @@ import logging
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
-from odoo.tools import float_repr, ormcache, safe_eval
+from odoo.tools import float_repr, safe_eval
 from zeep.helpers import serialize_object
 
 from .exceptions import ArcaError
@@ -35,10 +35,13 @@ class ArcaWs(models.Model):
     )
 
     @api.model
-    @ormcache("code", "env_type", cache="stable")
     def get_arca_url(self, code, env_type):
         """Get ARCA URL for a given service code and environment type
-        (production or homologation)
+        (production or homologation).
+
+        Not ormcached on purpose: the environment can change at runtime via
+        the ``arcaws.env.type`` parameter and must take effect without
+        restarting the server.
         """
         url_record = self.search([("code", "=", code)], limit=1)
         if not url_record:

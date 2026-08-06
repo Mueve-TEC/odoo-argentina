@@ -57,7 +57,12 @@ class ResCompany(models.Model):
         * 'test' or 'develop' -->  homologation
         * other or no parameter -->  production
         """
-        parameter_env_type = self.env["ir.config_parameter"].sudo().get_param("arcaws.env.type")
+        # Se lee con search() en vez de get_param() porque get_param está
+        # cacheado con cache="stable" y un cambio del entorno en runtime no
+        # tomaría efecto hasta reiniciar el servidor.
+        parameter_env_type = (
+            self.env["ir.config_parameter"].sudo().search([("key", "=", "arcaws.env.type")], limit=1).value
+        )
         if parameter_env_type == "production":
             environment_type = "production"
         elif parameter_env_type == "homologation":
