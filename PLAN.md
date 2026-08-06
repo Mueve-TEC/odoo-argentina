@@ -152,6 +152,9 @@ that repo.
 > árbol; `account-invoicing` lo aporta. Todos sus módulos dependen solo de
 > módulos Community (`account`, `sale`, `website_sale`,
 > `l10n_latam_invoice_document`, `account_ux`).
+>
+> `account-invoicing` was **also added to `scripts/pull-upstream.sh` URLS** (so
+> the script now accepts 5 keys, not the 4 shown in section 4).
 
 ```bash
 ls adhoc-modules          # => 5 dirs: odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools, account-invoicing
