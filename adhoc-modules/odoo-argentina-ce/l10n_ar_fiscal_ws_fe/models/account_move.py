@@ -234,6 +234,12 @@ class AccountMove(models.Model):
                 a_invoices += inv
                 continue
 
+            # El CAE requiere la fecha del comprobante (CbteFch): no tiene
+            # sentido validar contra ARCA sin fecha. Mejor avisar que asignar
+            # una fecha por defecto en silencio.
+            if not inv.invoice_date:
+                raise UserError(_("Debe indicar la fecha de la factura antes de validar contra ARCA."))
+
             # Obtener datos para mapeo
             msg = False
             next_invoice_number = int(inv.journal_id._get_last_invoice_number(inv.l10n_latam_document_type_id)) + 1
