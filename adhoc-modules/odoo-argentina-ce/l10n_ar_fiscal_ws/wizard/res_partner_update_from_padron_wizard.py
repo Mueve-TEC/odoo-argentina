@@ -135,6 +135,11 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         string="Partner",
         readonly=True,
     )
+    arca_error_message = fields.Text(help="Error reportado por ARCA para el partner seleccionado (p.ej. RG 4280/18)")
+    homologation_warning = fields.Text(
+        compute="_compute_homologation_warning",
+        help="Aviso visible cuando se opera el padrón en entorno de homologación",
+    )
     field_to_update_ids = fields.Many2many(
         "ir.model.fields",
         "res_partner_update_fields",
@@ -151,11 +156,24 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
     def change_partner(self):
         self.ensure_one()
         self.field_ids.unlink()
+        self.arca_error_message = False
         partner = self.partner_id
         fields_names = self.field_to_update_ids.mapped("name")
         if partner:
             warning = partner._get_padron_homologation_warning()
-            partner_vals = partner.get_data_from_padron_arca()
+            try:
+                partner_vals = partner.get_data_from_padron_arca()
+            except UserError as e:
+                # Un error de ARCA para este partner (p.ej. domicilio fiscal
+                # electrónico pendiente RG 4280/18) no debe bloquear el wizard:
+                # se muestra el motivo y el usuario puede saltearlo.
+                self.arca_error_message = str(e)
+                return {
+                    "warning": {
+                        "title": _("ARCA reportó errores para el partner"),
+                        "message": str(e),
+                    }
+                }
             if _logger.isEnabledFor(logging.DEBUG):
                 _logger.debug(
                     "=== Datos ARCA para %s ===\n"
@@ -223,6 +241,19 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                     }
                 }
         return {}
+
+    @api.depends()
+    def _compute_homologation_warning(self):
+        for rec in self:
+            if rec.env.company._get_environment_type() == "homologation":
+                rec.homologation_warning = _(
+                    "Estás operando el Padrón ARCA en el entorno de "
+                    "homologación: ARCA no es confiable aquí y puede devolver "
+                    "datos incompletos, responsabilidades erróneas o campos "
+                    "vacíos. Se recomienda usar certificados de producción."
+                )
+            else:
+                rec.homologation_warning = False
 
     def _update(self):
         self.ensure_one()
@@ -297,9 +328,12 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
             )
 
         self.write(values)
-        # because field is not changed, view is distroyed and reopen, on change
-        # is not called an we call it manually
-        self.change_partner()
+        if self.partner_ids:
+            # porque el field no cambia, la vista se destruye y se reabre; el
+            # onchange no se dispara y lo llamamos a mano. Solo si hay un
+            # próximo partner: si terminamos, change_partner re-consultaría el
+            # último partner y podría volver a disparar el error de ARCA.
+            self.change_partner()
         return {
             "type": "ir.actions.act_window",
             "res_model": self._name,

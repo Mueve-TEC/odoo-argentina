@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from odoo.addons.l10n_ar_fiscal_ws.models.arcaws import ArcaWsMethod
+from odoo.addons.l10n_ar_fiscal_ws.models.res_partner import ResPartner
 from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
@@ -65,3 +66,20 @@ class TestPadronErrors(TransactionCase):
         vals = self._get_data()
         self.assertIsInstance(vals, dict)
         self.assertEqual(vals["street"], "Av Test 123")
+
+    def test_wizard_arca_error_is_not_blocking(self):
+        """An ARCA per-partner error must not block the wizard (skippable)."""
+        wizard = self.env["res.partner.update.from.padron.wizard"].create({"partner_id": self.partner.id})
+        with patch.object(
+            ResPartner,
+            "get_data_from_padron_arca",
+            side_effect=UserError(
+                "La CUIT registra pendiente la constitucion del domicilio fiscal electronico RG 4280/18"
+            ),
+        ):
+            result = wizard.change_partner()
+        self.assertEqual(
+            wizard.arca_error_message,
+            "La CUIT registra pendiente la constitucion del domicilio fiscal electronico RG 4280/18",
+        )
+        self.assertIn("warning", result)

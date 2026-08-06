@@ -15,6 +15,9 @@
                 <field invisible="1" name="state"/>
                 <header/>
                 <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not homologation_warning">
+                        <field name="homologation_warning" nolabel="1"/>
+                    </div>
                     <group invisible="state != 'finished'" col="1">
                         <h2>There are no more partners to update for this request...</h2>
                     </group>
@@ -30,6 +33,9 @@
                                 <field required="state == 'selection'" name="partner_id" options="{'no_open': True}"/>
                             </h1>
                         </group>
+                    </group>
+                    <group invisible="state != 'selection' or not arca_error_message">
+                        <field name="arca_error_message" nolabel="1" class="text-danger"/>
                     </group>
                     <group invisible="state in ('option', 'finished')">
                         <field name="field_ids" nolabel="1">
