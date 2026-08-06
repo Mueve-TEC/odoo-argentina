@@ -204,7 +204,13 @@ class ResCompany(models.Model):
             }
         )
         connection = self.env["arcaws.connection"].create(auth_data)
-        self.env.cr.commit()  # pylint: disable=invalid-commit
+        # El TA emitido por ARCA es válido 12 hs y no se puede volver a pedir
+        # dentro de ese plazo ("El CEE ya posee un TA valido..."). Los handlers
+        # de testing (dummy, puntos de venta, tipos de documento) levantan
+        # ArcaError DESPUÉS de crear la conexión para mostrar el resultado, lo
+        # que abortaría y revertiría el create. Este commit persiste el TA
+        # antes de que eso ocurra.
+        self.env.cr.commit()
         return connection
 
     def _arca_parse_login(self, response):

@@ -290,11 +290,6 @@ msgid "Contact"
 msgstr "Contacto"
 
 #. module: l10n_ar_afipws
-#: model:ir.model.fields,help:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__title_case
-msgid "Converts retreived text fields to Title Case."
-msgstr ""
-
-#. module: l10n_ar_afipws
 #: code:addons/l10n_ar_afipws/models/res_company.py:0
 #, python-format
 msgid "Could not connect. This is the what we received: %s"
@@ -679,11 +674,6 @@ msgid ""
 msgstr ""
 
 #. module: l10n_ar_afipws
-#: model:ir.model.fields,field_description:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__title_case
-msgid "Title Case"
-msgstr ""
-
-#. module: l10n_ar_afipws
 #: model_terms:ir.ui.view,arch_db:l10n_ar_afipws.view_afipws_certificate_alias_form
 #: model_terms:ir.ui.view,arch_db:l10n_ar_afipws.view_afipws_certificate_form
 msgid "To Draft"
@@ -720,11 +710,6 @@ msgstr ""
 #. module: l10n_ar_afipws
 #: model_terms:ir.ui.view,arch_db:l10n_ar_afipws.view_base_partner_update_from_padron_form
 msgid "Update Automatically"
-msgstr ""
-
-#. module: l10n_ar_afipws
-#: model:ir.model.fields,field_description:l10n_ar_afipws.field_res_partner_update_from_padron_wizard__update_constancia
-msgid "Update Constancia"
 msgstr ""
 
 #. module: l10n_ar_afipws

@@ -1,5 +1,4 @@
 import logging
-from ast import literal_eval
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -105,13 +104,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         ]
 
     @api.model
-    def _get_default_title_case(self):
-        parameter = self.env["ir.config_parameter"].sudo().get_param("use_title_case_on_padron_afip")
-        if parameter == "False" or parameter == "0":
-            return False
-        return True
-
-    @api.model
     def get_fields(self):
         return self.env["ir.model.fields"].search(self._get_domain())
 
@@ -143,13 +135,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         string="Partner",
         readonly=True,
     )
-    update_constancia = fields.Boolean(
-        default=True,
-    )
-    title_case = fields.Boolean(
-        help="Converts retreived text fields to Title Case.",
-        default=_get_default_title_case,
-    )
     field_to_update_ids = fields.Many2many(
         "ir.model.fields",
         "res_partner_update_fields",
@@ -169,14 +154,19 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
         partner = self.partner_id
         fields_names = self.field_to_update_ids.mapped("name")
         if partner:
+            warning = partner._get_padron_homologation_warning()
             partner_vals = partner.get_data_from_padron_arca()
-            _logger.info(
-                "=== Datos ARCA para %s ===\n" "Campos disponibles: %s\n" "Campos seleccionados: %s\n" "Valores: %s",
-                partner.name,
-                list(partner_vals.keys()),
-                fields_names,
-                partner_vals,
-            )
+            if _logger.isEnabledFor(logging.DEBUG):
+                _logger.debug(
+                    "=== Datos ARCA para %s ===\n"
+                    "Campos disponibles: %s\n"
+                    "Campos seleccionados: %s\n"
+                    "Valores: %s",
+                    partner.name,
+                    list(partner_vals.keys()),
+                    fields_names,
+                    partner_vals,
+                )
             lines = []
             fields_names = list(set(partner_vals) & set(fields_names))
             for key in fields_names:
@@ -184,8 +174,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                 new_value = partner_vals[key]
                 if new_value == "":
                     new_value = False
-                if self.title_case and key in ("name", "city", "street"):
-                    new_value = new_value and new_value.title()
 
                 # Manejar campos Many2one para mostrar nombre en lugar de ID
                 if key in ("state_id", "l10n_ar_afip_responsibility_type_id"):
@@ -214,18 +202,6 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                             "real_value": (str(new_value) if new_value else False),
                         }
                         lines.append((0, False, line_vals))
-                elif key in ("impuestos_padron", "actividades_padron"):
-                    old_value_ids = old_value.ids
-                    new_value_ids = new_value if new_value else []
-                    if old_value_ids != new_value_ids:
-                        line_vals = {
-                            "wizard_id": self.id,
-                            "field": key,
-                            "old_value": str(old_value_ids),
-                            "new_value": str(new_value_ids),
-                            "real_value": str(new_value_ids),
-                        }
-                        lines.append((0, False, line_vals))
                 else:
                     # Campos normales (Char, Text, etc)
                     old_value_str = str(old_value) if old_value else ""
@@ -239,15 +215,20 @@ class ResPartnerUpdateFromPadronWizard(models.TransientModel):
                         }
                         lines.append((0, False, line_vals))
             self.field_ids = lines
+            if warning:
+                return {
+                    "warning": {
+                        "title": _("Padrón ARCA en homologación"),
+                        "message": warning,
+                    }
+                }
+        return {}
 
     def _update(self):
         self.ensure_one()
         vals = {}
         for field in self.field_ids:
-            if field.field in ("impuestos_padron", "actividades_padron"):
-                value_to_write = field.real_value if field.real_value else field.new_value
-                vals[field.field] = [(6, False, literal_eval(value_to_write))]
-            elif field.field in (
+            if field.field in (
                 "state_id",
                 "l10n_ar_afip_responsibility_type_id",
             ):

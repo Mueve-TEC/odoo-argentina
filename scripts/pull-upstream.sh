@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./scripts/pull-upstream.sh <name>
-#       <name> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools }
+#       <name> ∈ { odoo-argentina, odoo-argentina-ce, account-payment, account-financial-tools, account-invoicing }
 #
 # Runs `git subtree pull --squash`, i.e. one "Squashed …" + one "Merge commit …"
 # pair on top of HEAD — identical flow to the initial `git subtree add`.
@@ -25,6 +25,7 @@ declare -A URLS=(
   [odoo-argentina-ce]="https://github.com/adhoc-dev/odoo-argentina-ce.git"
   [account-payment]="https://github.com/ingadhoc/account-payment.git"
   [account-financial-tools]="https://github.com/ingadhoc/account-financial-tools.git"
+  [account-invoicing]="https://github.com/ingadhoc/account-invoicing.git"
 )
 
 declare -A BRANCHES=(
@@ -32,6 +33,7 @@ declare -A BRANCHES=(
   [odoo-argentina-ce]="19.0-mig-MAQ"
   [account-payment]="19.0"
   [account-financial-tools]="19.0"
+  [account-invoicing]="19.0"
 )
 
 NAME="${1:-}"

@@ -63,7 +63,7 @@ class ResPartner(models.Model):
 
     # Separo esto para poder heredar de otros
     # modulos y extender los datos
-    def parse_census_vals(self, census):
+    def parse_census_vals(self, census):  # noqa: C901
         """Parse census data from ARCA Padrón A5.
 
         Args:
@@ -92,12 +92,19 @@ class ResPartner(models.Model):
             # por ej. monotributista devuelve N
             imp_iva = "NI"
 
-        vals = {
-            "street": get_value(census, "direccion"),
-            "city": get_value(census, "localidad"),
-            "zip": get_value(census, "cod_postal"),
-            "last_update_census": fields.Date.today(),
-        }
+        vals = {"last_update_census": fields.Date.today()}
+
+        # Solo incluir street/city/zip si ARCA devolvió un valor: así un
+        # domicilio incompleto no pisa los datos ya cargados del partner.
+        direccion = get_value(census, "direccion")
+        if direccion:
+            vals["street"] = direccion
+        localidad = get_value(census, "localidad")
+        if localidad:
+            vals["city"] = localidad
+        cod_postal = get_value(census, "cod_postal")
+        if cod_postal:
+            vals["zip"] = cod_postal
 
         # Solo incluir 'name' si denominacion tiene un valor válido
         denominacion = get_value(census, "denominacion")
@@ -422,9 +429,50 @@ class ResPartner(models.Model):
         vals = self.parse_census_vals(census_data)
         return vals
 
+    def _raise_if_arca_errors(self, persona_data, cuit):
+        """Raise UserError when ARCA returned errors for a persona.
+
+        Mirrors pyafipws WSSrPadronA5 (which extends self.errores from these
+        three keys) so the real ARCA reason is shown instead of a misleading
+        'no devolvió datos' error.
+        """
+        if not isinstance(persona_data, dict):
+            return
+        errors = []
+        for key in ("errorConstancia", "errorMonotributo", "errorRegimenGeneral"):
+            error = persona_data.get(key)
+            if error:
+                errors.append(str(error.get("error") if isinstance(error, dict) else error))
+        if errors:
+            raise UserError(_("ARCA reportó errores para el CUIT %s:\n%s") % (cuit, "\n".join(errors)))
+
+    def _get_padron_homologation_warning(self):
+        """Return a warning message when the padrón service would run against homologation certs.
+
+        The ARCA padrón web service is not reliable in the homologation
+        environment: it returns incomplete data, wrong responsibility states
+        (e.g. 'Consumidor Final') or empty fields. When no warning applies,
+        returns False.
+        """
+        self.ensure_one()
+        company = self.company_id or self.env.company
+        if company._get_environment_type() == "homologation":
+            return _(
+                "Estás por usar el servicio de Padrón ARCA con certificados de "
+                "homologación.\n\nEl padrón de ARCA no es confiable en "
+                "homologación: puede devolver datos incompletos, "
+                "responsabilidades erróneas (por ejemplo 'Consumidor Final') o "
+                "campos vacíos. Se recomienda usar el entorno de producción con "
+                "certificados reales."
+            )
+        return False
+
     def update_from_padron_arca(self):
         """Actualiza el partner desde el Padrón ARCA sin wizard."""
         self.ensure_one()
+        warning = self._get_padron_homologation_warning()
+        if warning:
+            raise UserError(warning)
         try:
             partner_vals = self.get_data_from_padron_arca()
             self.write(partner_vals)
@@ -461,6 +509,10 @@ class ResPartner(models.Model):
         Filtra partners con CUIT válido, agrupa en lotes y consulta
         el Padrón A5 de manera masiva.
         """
+        warning = self[:1]._get_padron_homologation_warning()
+        if warning:
+            raise UserError(warning)
+
         # Filtrar partners con CUIT válido (tipo 80)
         partners_with_cuit = self.filtered(
             lambda p: p.vat
@@ -530,6 +582,10 @@ class ResPartner(models.Model):
                             msg = "CUIT %s: Sin datos en respuesta ARCA"
                             error_details.append(_(msg) % partner_cuit)
                             continue
+
+                        # Arca puede devolver errores por persona (p.ej. RG
+                        # 4280/18 domicilio fiscal electrónico pendiente)
+                        partner._raise_if_arca_errors(persona_data, partner_cuit)
 
                         # Transformar y parsear usando método auxiliar
                         vals = partner._transform_and_parse_persona_data(persona_data)
@@ -627,6 +683,7 @@ class ResPartner(models.Model):
 
             # Validar y serializar respuesta (single=True retorna directamente)
             persona_data = self._validate_and_serialize_arca_response(res, cuit, single=True)
+            self._raise_if_arca_errors(persona_data, cuit)
 
             # Validación adicional: ARCA en homologación puede devolver estructura vacía
             if not persona_data or not isinstance(persona_data, dict):
@@ -671,14 +728,21 @@ class ResPartner(models.Model):
             raise UserError(error_msg % (self.name, cuit, str(e))) from e
 
     def l10n_ar_fiscal_ws_fe_min_ammount(self):
-        for record in self:
-            if record.l10n_ar_vat:
-                ws = self.env.company.arca_get_connection("wsfecred")
-                res = ws.call_arca_service(
-                    "ConsultarMontoObligadoRecepcion",
-                    {
-                        "cuitConsultada": record.l10n_ar_vat,
-                        "fechaEmision": fields.Date.today(),
-                    },
-                )
-                return res
+        """Return the amount from which the partner must receive MiPyME credit invoices."""
+        self.ensure_one()
+        if not self.l10n_ar_vat:
+            return
+        arcaws = self.env["arcaws"].search([("code", "=", "wsfecred")], limit=1)
+        if not arcaws:
+            raise UserError(_("No se encontró configuración del servicio wsfecred"))
+        method_id = arcaws.method_ids.filtered(lambda m: m.name == "get_monto_obligado_recepcion")
+        if not method_id:
+            raise UserError(_("No se encontró el método get_monto_obligado_recepcion configurado"))
+        method_id.ensure_one()
+        return method_id.call_arca_method(
+            obj=self,
+            extra_values={
+                "cuit": self.l10n_ar_vat,
+                "fecha_emision": fields.Date.today(),
+            },
+        )

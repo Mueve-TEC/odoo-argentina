@@ -1,5 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_arcaws_connection_manager,arcaws.connection.manager,model_arcaws_connection,base.group_user,1,1,1,1
+access_arcaws_connection_manager,arcaws.connection.manager,model_arcaws_connection,base.group_system,1,1,1,1
 access_arcaws_connection_user,arcaws.connection.user,model_arcaws_connection,,1,0,0,0
 access_arcaws_certificate_alias_manager,arcaws.certificate.alias.manager,model_arcaws_certificate_alias,base.group_system,1,1,1,1
 access_arcaws_certificate_alias_user,arcaws.certificate.alias.user,model_arcaws_certificate_alias,base.group_user,1,0,0,0
