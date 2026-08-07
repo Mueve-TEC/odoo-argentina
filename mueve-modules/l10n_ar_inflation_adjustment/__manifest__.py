@@ -3,7 +3,7 @@
     'summary': """
         Ajuste por inflación contable para cierre de ejercicio fiscal argentino.""",
     'author': "Mueve",
-    'website': "https://github.com/Mueve-TEC/odoo-argentina",
+    "website": "https://mueve.org.ar/",
     'category': 'Accounting',
     'version': "18.0.1.0.0",
     'license': 'AGPL-3',

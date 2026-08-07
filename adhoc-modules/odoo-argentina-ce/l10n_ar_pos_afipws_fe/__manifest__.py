@@ -3,7 +3,8 @@
     "name": "Punto de venta Factura Electrónica Argentina",
     "version": "19.0.1.0.0",
     "category": "Localization/Argentina",
-    "author": "ADHOC SA, Filoquin",
+    "author": "Mueve, ADHOC SA, Filoquin",
+    "website": "https://mueve.org.ar/",
     "license": "AGPL-3",
     "summary": "",
     "depends": [

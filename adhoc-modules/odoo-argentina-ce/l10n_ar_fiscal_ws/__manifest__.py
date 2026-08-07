@@ -1,8 +1,9 @@
 {
     "name": "Modulo Base para los Web Services de ARCA",
-    "version": "19.0.1.8.0",
+    "version": "19.0.1.8.1",
     "category": "Localization/Argentina",
-    "author": "ADHOC SA, Moldeo Interactive,Odoo Community Association (OCA)",
+    "author": "Mueve, ADHOC SA, Moldeo Interactive,Odoo Community Association (OCA)",
+    "website": "https://mueve.org.ar/",
     "license": "AGPL-3",
     "summary": "",
     "depends": [
