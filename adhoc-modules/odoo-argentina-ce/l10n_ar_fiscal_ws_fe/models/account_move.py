@@ -244,7 +244,8 @@ class AccountMove(models.Model):
             msg = False
             next_invoice_number = int(inv.journal_id._get_last_invoice_number(inv.l10n_latam_document_type_id)) + 1
             arca_document_code = inv.partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
-            amounts = inv._l10n_ar_get_amounts()
+            base_lines = inv._get_rounded_base_and_tax_lines()[0]
+            amounts = inv._l10n_ar_get_amounts(base_lines=base_lines)
 
             # Esto no es necesario ahora ya que el numero se obtiene desde el result
             document_number = inv._get_formatted_sequence(next_invoice_number)
