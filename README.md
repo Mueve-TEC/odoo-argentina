@@ -8,8 +8,9 @@ Localización Argentina para Odoo Community Edition 19. Esta versión está basa
   (rama de migración a 19.0 de [adhoc-dev](https://github.com/adhoc-dev), PR
   abierto [#92](https://github.com/ingadhoc/odoo-argentina-ce/pull/92) a
   ingadhoc; incluye el renombrado `l10n_ar_afipws` → `l10n_ar_fiscal_ws` y
-  `l10n_ar_afipws_fe` → `l10n_ar_fiscal_ws_fe`. `l10n_ar_pos_afipws_fe` y
-  `l10n_ar_reports` aún no están migrados en esta rama.)
+  `l10n_ar_afipws_fe` → `l10n_ar_fiscal_ws_fe`. `l10n_ar_pos_afipws_fe` ya está
+  migrado e instalable (PR Mueve-TEC#2); `l10n_ar_reports` es el único módulo
+  de upstream que aún no está migrado.)
 - [account-payment](https://github.com/ingadhoc/account-payment/tree/19.0)
 - [account-financial-tools](https://github.com/ingadhoc/account-financial-tools/tree/19.0)
 - [account-invoicing](https://github.com/ingadhoc/account-invoicing/tree/19.0)

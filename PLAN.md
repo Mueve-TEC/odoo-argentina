@@ -109,6 +109,15 @@ git checkout -b 19.0
 > Note: `mueve-modules/l10n_ar_inflation_adjustment` currently holds **Odoo-18**
 > code. Migrating it to Odoo-19 is **separate work, out of scope for this plan**
 > (see Step 7). Structurally it stays in place.
+>
+> **Post-script (2026-09-04 update):** the mechanical view migration of
+> `l10n_ar_inflation_adjustment` has since been done on `19.0` (commits
+> `[MIG] … updating views syntax for odoo 18` and later: `<list>` views, inline
+> `invisible`, `_post_init_hook(env)`). What remains is final Odoo-19
+> validation + 3 code fixes (broken xpaths vs. Odoo-19 core account views,
+> banned `<group>` in the index search view, deprecated `read_group` in the
+> wizard) — see the supermodule `soltec-localdev-odoo19/PLAN.md`
+> "Remaining migration work" for the authoritative list.
 
 ---
 
@@ -307,6 +316,11 @@ the 18.0 branch in Step 2. It needs actual Odoo-version migration (view syntax
 signature `(env)` for 18+ carried to 19, etc.). **That migration is separate
 work** and is NOT part of this structural plan. Just leave the directory in
 place; do not modify it here.
+
+> **Update (2026-09-04):** the view-syntax migration has since landed on
+> `19.0` (`[MIG]` commits); the remaining Odoo-19 fixes (xpaths, search-view
+> `<group>`, `read_group`→`_read_group`, version bump) are tracked in the
+> supermodule `PLAN.md` and are being executed in the current pass.
 
 ---
 
