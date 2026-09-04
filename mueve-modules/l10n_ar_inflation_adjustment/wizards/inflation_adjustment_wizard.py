@@ -53,7 +53,7 @@ class InflationAdjustmentWizard(models.TransientModel):
     result_account_id = fields.Many2one(
         'account.account',
         string='Cuenta de Resultado por Ajuste',
-        domain="[('deprecated', '=', False)]",
+        domain="[('active', '=', True)]",
         check_company=True,
         required=True,
         help='Cuenta donde se registrará el resultado neto del ajuste por inflación. '
@@ -377,26 +377,23 @@ class InflationAdjustmentWizard(models.TransientModel):
         ]
 
         # Agrupar por cuenta
-        grouped = MoveLine.read_group(
+        grouped = MoveLine._read_group(
             domain,
-            ['account_id', 'balance'],
             ['account_id'],
+            ['balance:sum'],
         )
 
-        for group in grouped:
-            balance = group.get('balance', 0.0)
+        for account, balance in grouped:
             adjustment = balance * initial_factor
 
             if self.currency_id.is_zero(adjustment):
                 continue
 
             adjustment = self.currency_id.round(adjustment)
-            account_id = group.get('account_id')[0]
-            account = self.env['account.account'].browse(account_id)
 
             lines_data.append(
                 {
-                    'account_id': account_id,
+                    'account_id': account.id,
                     'account_name': account.display_name,
                     'period': _('Saldo Inicial (antes de %s)')
                     % format_date(self.env, self.date_from, date_format='MM/yyyy'),
@@ -431,26 +428,23 @@ class InflationAdjustmentWizard(models.TransientModel):
             ]
 
             # Agrupar por cuenta
-            grouped = MoveLine.read_group(
+            grouped = MoveLine._read_group(
                 domain,
-                ['account_id', 'balance'],
                 ['account_id'],
+                ['balance:sum'],
             )
 
-            for group in grouped:
-                balance = group.get('balance', 0.0)
+            for account, balance in grouped:
                 adjustment = balance * period['factor']
 
                 if self.currency_id.is_zero(adjustment):
                     continue
 
                 adjustment = self.currency_id.round(adjustment)
-                account_id = group.get('account_id')[0]
-                account = self.env['account.account'].browse(account_id)
 
                 lines_data.append(
                     {
-                        'account_id': account_id,
+                        'account_id': account.id,
                         'account_name': account.display_name,
                         'period': format_date(self.env, period['date_from'], date_format='MM/yyyy'),
                         'original_balance': balance,

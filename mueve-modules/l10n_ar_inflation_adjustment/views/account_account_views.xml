@@ -7,7 +7,7 @@
         <field name="model">account.account</field>
         <field name="inherit_id" ref="account.view_account_form" />
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='deprecated']" position="after">
+            <xpath expr="//field[@name='tag_ids']" position="after">
                 <field name="inflation_adjustable" readonly="1" />
             </xpath>
         </field>
@@ -31,7 +31,7 @@
         <field name="model">account.account</field>
         <field name="inherit_id" ref="account.view_account_search" />
         <field name="arch" type="xml">
-            <xpath expr="//filter[@name='activeacc']" position="after">
+            <xpath expr="//filter[@name='inactiveacc']" position="after">
                 <separator />
                 <filter name="filter_inflation_adjustable" string="Ajustables por Inflación"
                     domain="[('inflation_adjustable', '=', True)]" />

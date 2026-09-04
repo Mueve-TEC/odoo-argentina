@@ -8,7 +8,9 @@ def post_init_hook(env):
     Asigna automáticamente el tag "No Monetaria" a las cuentas correspondientes.
     """
     # Asignar tag a cuentas de todas las compañías argentinas
-    companies = env['res.company'].search([('country_id.code', '=', 'AR')])
+    # (en Odoo 19 res.company.country_id es computado no almacenado; el campo
+    # almacenado equivalente está en el partner de la compañía)
+    companies = env['res.company'].search([('partner_id.country_id.code', '=', 'AR')])
 
     if companies:
         env['account.account'].set_non_monetary_tag(companies)

@@ -58,9 +58,8 @@
                 <filter name="filter_last_year" string="Año Anterior"
                     domain="[('date', '>=', (context_today() - relativedelta(years=1)).replace(month=1, day=1)),
                                  ('date', '&lt;=', (context_today() - relativedelta(years=1)).replace(month=12, day=31))]" />
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_year" string="Año" context="{'group_by': 'date:year'}" />
-                </group>
+                <separator />
+                <filter name="group_year" string="Año" context="{'group_by': 'date:year'}" />
             </search>
         </field>
     </record>
