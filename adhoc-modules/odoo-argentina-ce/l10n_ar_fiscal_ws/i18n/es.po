@@ -853,7 +853,7 @@ msgstr "Llave privada"
 #: model:ir.model.fields.selection,name:l10n_ar_fiscal_ws.selection__arcaws_certificate_alias__type__production
 #: model:ir.model.fields.selection,name:l10n_ar_fiscal_ws.selection__arcaws_connection__type__production
 msgid "Production"
-msgstr " "
+msgstr "Production"
 
 #. module: l10n_ar_fiscal_ws
 #: model:ir.model.fields,field_description:l10n_ar_fiscal_ws.field_arcaws__production_url
