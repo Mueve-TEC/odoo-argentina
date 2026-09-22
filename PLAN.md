@@ -113,11 +113,11 @@ git checkout -b 19.0
 > **Post-script (2026-09-04 update):** the mechanical view migration of
 > `l10n_ar_inflation_adjustment` has since been done on `19.0` (commits
 > `[MIG] … updating views syntax for odoo 18` and later: `<list>` views, inline
-> `invisible`, `_post_init_hook(env)`). What remains is final Odoo-19
-> validation + 3 code fixes (broken xpaths vs. Odoo-19 core account views,
-> banned `<group>` in the index search view, deprecated `read_group` in the
-> wizard) — see the supermodule `soltec-localdev-odoo19/PLAN.md`
-> "Remaining migration work" for the authoritative list.
+> `invisible`, `_post_init_hook(env)`). The follow-up Odoo-19 fixes (xpaths,
+> search-view `<group>`, `read_group`→`_read_group`, version bump →
+> `19.0.1.0.0`) landed in `188bd2564` — **this module is fully migrated**.
+> Any remaining cross-repo migration backlog lives in `MIGRATION_19.md`
+> (this repo).
 
 ---
 
@@ -318,9 +318,9 @@ work** and is NOT part of this structural plan. Just leave the directory in
 place; do not modify it here.
 
 > **Update (2026-09-04):** the view-syntax migration has since landed on
-> `19.0` (`[MIG]` commits); the remaining Odoo-19 fixes (xpaths, search-view
-> `<group>`, `read_group`→`_read_group`, version bump) are tracked in the
-> supermodule `PLAN.md` and are being executed in the current pass.
+> `19.0` (`[MIG]` commits) and the follow-up fixes landed in `188bd2564`
+> (see the Post-script in §2) — this module is fully migrated. Remaining
+> cross-repo migration backlog: `MIGRATION_19.md` (this repo).
 
 ---
 
