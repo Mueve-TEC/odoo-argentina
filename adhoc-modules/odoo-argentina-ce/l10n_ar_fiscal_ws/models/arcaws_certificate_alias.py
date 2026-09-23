@@ -2,16 +2,20 @@
 # For copyright and license notices, see __manifest__.py file in module root
 # directory
 ##############################################################################
+import logging
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-try:
-    from OpenSSL import crypto
-except ImportError:
-    crypto = None
-import logging
-
 _logger = logging.getLogger(__name__)
+
+
+def _arca_ascii(value):
+    return (value or "").encode("ascii", "ignore").decode("ascii")
 
 
 class ArcawsCertificateAlias(models.Model):
@@ -47,6 +51,7 @@ class ArcawsCertificateAlias(models.Model):
         required=True,
         readonly=True,
         default=lambda self: self.env.company,
+        ondelete="restrict",
         bypass_search_access=True,
         index=True,
     )
@@ -55,11 +60,13 @@ class ArcawsCertificateAlias(models.Model):
         "Country",
         readonly=True,
         required=True,
+        ondelete="restrict",
     )
     state_id = fields.Many2one(
         "res.country.state",
         "State",
         readonly=True,
+        ondelete="set null",
     )
     city = fields.Char(
         readonly=True,
@@ -153,9 +160,13 @@ class ArcawsCertificateAlias(models.Model):
         """ """
         # TODO reemplazar todo esto por las funciones nativas de pyarcaws
         for rec in self:
-            k = crypto.PKey()
-            k.generate_key(crypto.TYPE_RSA, key_length)
-            rec.key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k)
+            key = rsa.generate_private_key(public_exponent=65537, key_size=key_length)
+            pem = key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            )
+            rec.key = pem.decode("ascii")
 
     def action_to_draft(self):
         self.write({"state": "draft"})
@@ -171,25 +182,28 @@ class ArcawsCertificateAlias(models.Model):
         TODO agregar descripcion y ver si usamos pyarcasw para generar esto
         """
         for record in self:
-            req = crypto.X509Req()
-            req.get_subject().C = self.country_id.code.encode("ascii", "ignore")
-            if self.state_id:
-                req.get_subject().ST = self.state_id.name.encode("ascii", "ignore")
-            req.get_subject().L = self.city.encode("ascii", "ignore")
-            req.get_subject().O = self.company_id.name.encode("ascii", "ignore")
-            req.get_subject().OU = self.department.encode("ascii", "ignore")
-            req.get_subject().CN = self.common_name.encode("ascii", "ignore")
-            req.get_subject().serialNumber = "CUIT %s" % self.cuit.encode("ascii", "ignore")
-            k = crypto.load_privatekey(crypto.FILETYPE_PEM, self.key)
-            self.key = crypto.dump_privatekey(crypto.FILETYPE_PEM, k)
-            req.set_pubkey(k)
-            req.sign(k, "sha256")
-            csr = crypto.dump_certificate_request(crypto.FILETYPE_PEM, req)
+            if not record.key:
+                record.generate_key()
+            key = serialization.load_pem_private_key(record.key.encode("utf-8"), password=None)
+            attributes = [
+                x509.NameAttribute(NameOID.COUNTRY_NAME, _arca_ascii(record.country_id.code)),
+                x509.NameAttribute(NameOID.LOCALITY_NAME, _arca_ascii(record.city)),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, _arca_ascii(record.company_id.name)),
+                x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, _arca_ascii(record.department)),
+                x509.NameAttribute(NameOID.COMMON_NAME, _arca_ascii(record.common_name)),
+                x509.NameAttribute(NameOID.SERIAL_NUMBER, "CUIT %s" % (record.cuit or "")),
+            ]
+            if record.state_id:
+                attributes.insert(
+                    1,
+                    x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, _arca_ascii(record.state_id.name)),
+                )
+            csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name(attributes)).sign(key, hashes.SHA256())
             vals = {
-                "csr": csr,
+                "csr": csr.public_bytes(serialization.Encoding.PEM).decode("ascii"),
                 "alias_id": record.id,
             }
-            self.certificate_ids.create(vals)
+            record.certificate_ids.create(vals)
         return True
 
     @api.constrains("common_name")

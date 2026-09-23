@@ -118,7 +118,8 @@ class ArcawsCertificate(models.Model):
             try:
                 certificate = crypto.load_certificate(crypto.FILETYPE_PEM, self.crt.encode("ascii"))
             except Exception as e:
-                if "Expecting: CERTIFICATE" in e[0]:
+                err = str(e)
+                if "Expecting: CERTIFICATE" in err or "no start line" in err:
                     raise UserError(
                         _(
                             "Wrong Certificate file format.\nBe sure you have "
@@ -126,7 +127,7 @@ class ArcawsCertificate(models.Model):
                         )
                     )
                 else:
-                    raise UserError(_("Unknown error.\nX509 return this message:\n %s") % (e[0]))
+                    raise UserError(_("Unknown error.\nX509 return this message:\n %s") % err)
         else:
             certificate = None
         return certificate
