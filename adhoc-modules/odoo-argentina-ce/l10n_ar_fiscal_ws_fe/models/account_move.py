@@ -146,37 +146,61 @@ class AccountMove(models.Model):
             else:
                 rec.validation_type = False
 
-    @api.depends("afip_auth_code")
+    @api.depends(
+        "afip_auth_code",
+        "afip_auth_mode",
+        "l10n_latam_document_number",
+        "l10n_latam_document_type_id",
+        "invoice_date",
+        "amount_total",
+        "currency_id",
+        "invoice_currency_rate",
+        "commercial_partner_id.l10n_latam_identification_type_id",
+        "commercial_partner_id.vat",
+    )
     def _compute_qr_code(self):
         for rec in self:
-            if rec.afip_auth_mode in ["CAE", "CAEA"] and rec.afip_auth_code:
-                number_parts = self._l10n_ar_get_document_number_parts(
-                    rec.l10n_latam_document_number, rec.l10n_latam_document_type_id.code
-                )
+            rec.afip_qr_code = False
+            if rec.afip_auth_mode not in ("CAE", "CAEA") or not rec.afip_auth_code:
+                continue
+            if not rec.l10n_latam_document_number or not rec.l10n_latam_document_type_id.code:
+                continue
+            number_parts = rec._l10n_ar_get_document_number_parts(
+                rec.l10n_latam_document_number, rec.l10n_latam_document_type_id.code
+            )
+            rate = rec.invoice_currency_rate or 1.0
+            qr_dict = {
+                "ver": 1,
+                "fecha": str(rec.invoice_date),
+                "cuit": int(rec.company_id.partner_id.l10n_ar_vat or 0),
+                "ptoVta": number_parts["point_of_sale"],
+                "tipoCmp": int(rec.l10n_latam_document_type_id.code),
+                "nroCmp": number_parts["invoice_number"],
+                "importe": float(float_repr(rec.amount_total, 2)),
+                "moneda": rec.currency_id.l10n_ar_afip_code,
+                "ctz": float(float_repr(1.0 / rate, 2)),
+                "tipoCodAut": "E" if rec.afip_auth_mode == "CAE" else "A",
+                "codAut": int(rec.afip_auth_code),
+            }
+            tipo_doc, nro_doc = rec._l10n_ar_get_receptor_doc()
+            qr_dict["tipoDocRec"] = int(tipo_doc)
+            qr_dict["nroDocRec"] = int(nro_doc or 0)
+            qr_data = base64.encodebytes(json.dumps(qr_dict, indent=None).encode("ascii")).decode("ascii")
+            qr_data = str(qr_data).replace("\n", "")
+            rec.afip_qr_code = "https://www.afip.gob.ar/fe/qr/?p=%s" % qr_data
 
-                qr_dict = {
-                    "ver": 1,
-                    "fecha": str(rec.invoice_date),
-                    "cuit": int(rec.company_id.partner_id.l10n_ar_vat),
-                    "ptoVta": number_parts["point_of_sale"],
-                    "tipoCmp": int(rec.l10n_latam_document_type_id.code),
-                    "nroCmp": number_parts["invoice_number"],
-                    "importe": float(float_repr(rec.amount_total, 2)),
-                    "moneda": rec.currency_id.l10n_ar_afip_code,
-                    "ctz": float(float_repr(rec.invoice_currency_rate, 2)),
-                    "tipoCodAut": "E" if rec.afip_auth_mode == "CAE" else "A",
-                    "codAut": int(rec.afip_auth_code),
-                }
-                if len(rec.commercial_partner_id.l10n_latam_identification_type_id) and rec.commercial_partner_id.vat:
-                    qr_dict["tipoDocRec"] = int(
-                        rec.commercial_partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
-                    )
-                    qr_dict["nroDocRec"] = int(rec.commercial_partner_id.vat.replace("-", "").replace(".", ""))
-                qr_data = base64.encodebytes(json.dumps(qr_dict, indent=None).encode("ascii")).decode("ascii")
-                qr_data = str(qr_data).replace("\n", "")
-                rec.afip_qr_code = "https://www.afip.gob.ar/fe/qr/?p=%s" % qr_data
-            else:
-                rec.afip_qr_code = False
+    def _l10n_ar_get_receptor_doc(self):
+        self.ensure_one()
+        partner = self.commercial_partner_id
+        ident_code = partner.l10n_latam_identification_type_id.l10n_ar_afip_code or ""
+        vat_digits = "".join(ch for ch in (partner.vat or "") if ch.isdigit())
+        final_consumer = self.env.ref("l10n_ar.res_CF", raise_if_not_found=False)
+        is_final_consumer = bool(final_consumer) and (partner.l10n_ar_afip_responsibility_type_id == final_consumer)
+        if ident_code == "99" or (is_final_consumer and not vat_digits):
+            return "99", "0"
+        if ident_code:
+            return ident_code, vat_digits or "0"
+        return "99", "0"
 
     def get_related_invoices_data(self):
         """
