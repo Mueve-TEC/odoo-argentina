@@ -1,7 +1,7 @@
 # pylint: disable=missing-module-docstring,pointless-statement
 {
     "name": "Punto de venta Factura Electrónica Argentina",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Localization/Argentina",
     "author": "Mueve, ADHOC SA, Filoquin",
     "website": "https://mueve.org.ar/",
