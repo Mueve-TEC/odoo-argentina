@@ -3,6 +3,7 @@
 # pylint: disable=invalid-name,protected-access
 
 from odoo import fields
+from odoo.exceptions import UserError
 from odoo.tests import TransactionCase, tagged
 
 
@@ -18,6 +19,13 @@ class TestPosOrderPrepareInvoiceVals(TransactionCase):
         cls.company.country_id = cls.env.ref("base.ar").id
         cls.journal = cls.env["account.journal"].search([("type", "=", "sale")], limit=1)
         cls.journal.l10n_ar_afip_pos_system = "RAW_MAW"
+        cls.non_arca_journal = cls.env["account.journal"].create(
+            {
+                "name": "Non ARCA Sales",
+                "code": "NARCA",
+                "type": "sale",
+            }
+        )
         cls.partner = cls.env["res.partner"].create(
             {
                 "name": "Test Pos Customer",
@@ -115,12 +123,12 @@ class TestPosOrderPrepareInvoiceVals(TransactionCase):
             }
         )
 
-    def _create_invoice(self, order, **kwargs):
+    def _create_invoice(self, order, journal=None, **kwargs):
         """Create an invoice and attach it to the given order."""
         vals = {
             "move_type": "out_invoice",
             "partner_id": self.partner.id,
-            "journal_id": self.journal.id,
+            "journal_id": (journal or self.journal).id,
             "invoice_date": fields.Date.today(),
         }
         vals.update(kwargs)
@@ -149,8 +157,26 @@ class TestPosOrderPrepareInvoiceVals(TransactionCase):
     def test_refund_non_arca_invoice_does_not_raise(self):
         """Refund of a non-ARCA invoice is not blocked."""
         order = self._create_sale_order()
-        invoice = self._create_invoice(order)
+        invoice = self._create_invoice(order, journal=self.non_arca_journal)
+        self.assertFalse(invoice.journal_id.arcaws)
         self.assertFalse(invoice.afip_auth_code)
         refund = self._create_refund_order(order)
         vals = refund._prepare_invoice_vals()
         self.assertEqual(vals["reversed_entry_id"], invoice.id)
+
+    def test_refund_arca_invoice_without_cae_raises(self):
+        """An electronic invoice without CAE must block the POS credit note."""
+        order = self._create_sale_order()
+        invoice = self._create_invoice(order)
+        self.assertTrue(invoice.journal_id.arcaws)
+        self.assertFalse(invoice.afip_auth_code)
+        refund = self._create_refund_order(order)
+        with self.assertRaises(UserError):
+            refund._prepare_invoice_vals()
+
+    def test_refund_finds_invoice_through_lines(self):
+        """The origin order is resolved from the refunded lines when needed."""
+        order = self._create_sale_order()
+        self._create_invoice(order, afip_auth_code="68448767638166")
+        refund = self._create_refund_order(order)
+        self.assertEqual(refund._l10n_ar_get_refunded_pos_orders(), order)
