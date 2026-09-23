@@ -217,6 +217,42 @@ class AccountMove(models.Model):
         )
         self.message_post(body=msg)
 
+    def _l10n_ar_check_letter_c_amounts(self, amounts):
+        self.ensure_one()
+        if self.l10n_latam_document_type_id.l10n_ar_letter != "C":
+            return
+        problems = []
+        if abs(amounts.get("vat_amount") or 0.0) >= 0.005:
+            problems.append(f"IVA {float_repr(amounts['vat_amount'], 2)}")
+        if abs(amounts.get("vat_untaxed_base_amount") or 0.0) >= 0.005:
+            problems.append(f"no gravado {float_repr(amounts['vat_untaxed_base_amount'], 2)}")
+        if abs(amounts.get("vat_exempt_base_amount") or 0.0) >= 0.005:
+            problems.append(f"exento {float_repr(amounts['vat_exempt_base_amount'], 2)}")
+        if not problems:
+            return
+        responsibility = self.company_id.partner_id.l10n_ar_afip_responsibility_type_id.name or _(
+            "exenta/monotributista"
+        )
+        raise UserError(
+            _(
+                "No se puede solicitar el CAE: %(document)s es un comprobante "
+                "clase C y ARCA exige que ImpTotConc, ImpOpEx e ImpIVA sean cero "
+                "para este tipo de comprobante. Importes detectados: "
+                "%(problems)s. La empresa «%(company)s» está configurada como "
+                "«%(responsibility)s» y emite comprobantes tipo C: revise los "
+                "impuestos de venta de los productos facturados (p. ej. quitar "
+                "IVA 21%% o «IVA No Gravado» de los productos de una empresa "
+                "exenta o monotributista). Los impuestos del producto son la "
+                "base en el POS; si el error persiste revise los impuestos configurados en el POS."
+            )
+            % {
+                "document": self.l10n_latam_document_type_id.display_name,
+                "problems": ", ".join(problems),
+                "company": self.company_id.name,
+                "responsibility": responsibility,
+            }
+        )
+
     def do_pyafipws_request_cae(self):
         "Request to AFIP the invoices' Authorization Electronic Code (CAE)"
         a_invoices = r_invoices = self.env["account.move"]
@@ -242,10 +278,11 @@ class AccountMove(models.Model):
 
             # Obtener datos para mapeo
             msg = False
-            next_invoice_number = int(inv.journal_id._get_last_invoice_number(inv.l10n_latam_document_type_id)) + 1
-            arca_document_code = inv.partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
             base_lines = inv._get_rounded_base_and_tax_lines()[0]
             amounts = inv._l10n_ar_get_amounts(base_lines=base_lines)
+            inv._l10n_ar_check_letter_c_amounts(amounts)
+            next_invoice_number = int(inv.journal_id._get_last_invoice_number(inv.l10n_latam_document_type_id)) + 1
+            arca_document_code = inv.partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
 
             # Esto no es necesario ahora ya que el numero se obtiene desde el result
             document_number = inv._get_formatted_sequence(next_invoice_number)
