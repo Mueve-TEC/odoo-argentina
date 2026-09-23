@@ -5,6 +5,7 @@
 import base64
 import json
 import logging
+import re
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -202,17 +203,87 @@ class AccountMove(models.Model):
             return ident_code, vat_digits or "0"
         return "99", "0"
 
+    def _l10n_ar_safe_document_number_parts(self):
+        self.ensure_one()
+        doc_code = self.l10n_latam_document_type_id.code or ""
+        prefix = self.l10n_latam_document_type_id.doc_code_prefix or ""
+        for raw in (self.l10n_latam_document_number, self.name):
+            if not raw or raw == "/":
+                continue
+            value = str(raw).strip()
+            if prefix and value.startswith(prefix):
+                value = value[len(prefix) :].strip()
+            if " " in value:
+                value = value.split(" ", 1)[-1].strip()
+            if doc_code and re.fullmatch(r"\d{1,5}-\d{1,8}", value):
+                try:
+                    parts = self._l10n_ar_get_document_number_parts(value, doc_code)
+                except (UserError, ValueError):
+                    parts = False
+                if parts:
+                    return parts
+            match = re.search(r"(\d{1,5})-(\d{1,8})", value)
+            if match:
+                return {"point_of_sale": int(match.group(1)), "invoice_number": int(match.group(2))}
+        return False
+
+    def _l10n_ar_related_invoice_from_pos(self):
+        self.ensure_one()
+        if "pos_order_ids" not in self._fields:
+            return self.browse()
+        orders = self.pos_order_ids
+        origin_orders = self.env["pos.order"]
+        if orders and "refunded_order_id" in orders._fields:
+            origin_orders |= orders.refunded_order_id
+        if orders and "refunded_order_ids" in orders._fields:
+            origin_orders |= orders.refunded_order_ids
+        if not origin_orders:
+            origin_orders = orders.lines.refunded_orderline_id.order_id
+        if not origin_orders:
+            return self.browse()
+        invoices = origin_orders.mapped("account_move")
+        if not invoices:
+            invoices = self.env["account.move"].search(
+                [("pos_order_ids", "in", origin_orders.ids), ("move_type", "=", "out_invoice")]
+            )
+        return invoices.filtered(
+            lambda move: move.company_id.country_id.code == "AR"
+            and move.is_invoice()
+            and move.move_type == "out_invoice"
+            and move.afip_auth_code
+        )[:1]
+
     def get_related_invoices_data(self):
         """
         List related invoice information to fill CbtesAsoc.
         """
         self.ensure_one()
-        if self.l10n_latam_document_type_id.internal_type == "credit_note":
-            return self.reversed_entry_id
-        elif self.l10n_latam_document_type_id.internal_type == "debit_note":
+        internal_type = self.l10n_latam_document_type_id.internal_type
+        if internal_type == "debit_note":
             return self.debit_origin_id
-        else:
+        if internal_type != "credit_note":
             return self.browse()
+        candidates = self.reversed_entry_id
+        if "pos_refunded_invoice_ids" in self._fields:
+            candidates |= self.pos_refunded_invoice_ids
+        candidates |= self._l10n_ar_related_invoice_from_pos()
+        candidates = candidates.filtered(
+            lambda move: move.is_invoice()
+            and move.move_type == "out_invoice"
+            and move.company_id.country_id.code == "AR"
+        )
+        with_cae = candidates.filtered(lambda move: move.afip_auth_code)
+        pool = with_cae or candidates
+        with_number = pool.filtered(lambda move: move._l10n_ar_safe_document_number_parts())
+        if pool and not with_number:
+            raise UserError(
+                _(
+                    "The credit note must reference the original electronic invoice "
+                    "(point of sale and number). Related invoice %s has no AFIP "
+                    "document number." % pool[:1].display_name
+                )
+            )
+        return (with_number or pool)[:1]
 
     def _post(self, soft=True):
         request_cae_invoices = self.filtered(
