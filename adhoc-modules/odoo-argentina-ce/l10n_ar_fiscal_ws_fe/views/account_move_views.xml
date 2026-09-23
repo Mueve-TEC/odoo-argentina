@@ -7,16 +7,18 @@
          <field name="inherit_id" ref="l10n_ar.view_move_form"/>
         <field name="arch" type="xml">
             <!-- we change button labels for better usability -->
-            <button name="action_post" position="attributes">
-                <attribute name="invisible">state != 'draft' or validation_type</attribute>
-                <attribute name="states"/>
-            </button>
-            <button name="action_post" position="after">
+            <xpath expr="//header/button[@name='action_post'][contains(@invisible, 'display_inactive_currency_warning')]" position="after">
                 <button name="action_post" type="object" invisible="state != 'draft' or validation_type != 'production'" string="Validar en AFIP" class="oe_highlight" groups="account.group_account_invoice"/>
                 <button name="action_post" type="object" invisible="state != 'draft' or validation_type != 'homologation'" string="Validar en HOMOLOGACION" class="oe_highlight" groups="account.group_account_invoice"/>
                 <button name="get_pyafipws_currency_rate" type="object" invisible="state != 'draft' or not validation_type != '' or not invoice_date or not currency_id or currency_id == company_currency_id" string="Check rate" groups="account.group_account_invoice"/>
-
-            </button>
+            </xpath>
+            <xpath expr="//header/button[@name='action_post'][contains(@invisible, 'display_inactive_currency_warning')]" position="attributes">
+                <attribute name="invisible">state != 'draft' or validation_type</attribute>
+                <attribute name="states"/>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <field name="validation_type" invisible="1"/>
+            </xpath>
             <field name="l10n_ar_afip_concept" position="after">
                 <field name="afip_fce_es_anulacion"/>
                 <label for="afip_auth_code" string="AFIP associated period" invisible="move_type != 'out_refund'"/>
@@ -30,7 +32,6 @@
             <notebook>
                 <page string="AFIP" name="afip" invisible="move_type not in ['out_invoice', 'out_refund']">
                     <group>
-                        <field name='validation_type' invisible="1"/>
                         <label for="afip_auth_code" string="AFIP authorization"/>
                         <div class="oe_inline">
                             <field name="afip_auth_mode" class="oe_inline" readonly="state != 'draft'"/>
