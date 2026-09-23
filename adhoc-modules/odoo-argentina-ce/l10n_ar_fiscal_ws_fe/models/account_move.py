@@ -351,6 +351,7 @@ class AccountMove(models.Model):
                     "afip_xml_response": response["afip_xml_response"],
                 }
                 inv.sudo().write(vals)
+                inv.env.cr.commit()
                 continue
 
             _logger.info(
