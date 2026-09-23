@@ -39,7 +39,7 @@
         <field name="definition_dict">{
     "token": connection.token,
     "sign": connection.sign,
-    "cuitRepresentada": int(company_id.partner_id.ensure_vat()),
+    "cuitRepresentada": int(company_id._get_arca_cuit()),
     "idPersona": [int(cuit) for cuit in extra_values.get('cuit_list', [])],
 }</field>
         <field name="response_dict"></field>
@@ -70,7 +70,7 @@
         <field name="definition_dict">{
     "token": connection.token,
     "sign": connection.sign,
-    "cuitRepresentada": int(company_id.partner_id.ensure_vat()),
+    "cuitRepresentada": int(company_id._get_arca_cuit()),
     "cuitConsultada": int(extra_values["cuit"]),
     "fechaEmision": extra_values["fecha_emision"].strftime("%Y-%m-%d"),
 }</field>

@@ -84,6 +84,29 @@ class ResCompany(models.Model):
         _logger.info("Running arg electronic invoice on %s mode" % environment_type)
         return environment_type
 
+    def _get_arca_cuit(self):
+        self.ensure_one()
+        alias = self.env["arcaws.certificate_alias"].search(
+            [
+                ("company_id", "=", self.id),
+                ("type", "=", self._get_environment_type()),
+                ("state", "=", "confirmed"),
+            ],
+            limit=1,
+        )
+        raw_cuit = (alias.cuit or "") if alias else ""
+        cuit = "".join(ch for ch in raw_cuit if ch.isdigit())
+        if not cuit:
+            cuit = self.partner_id.ensure_vat()
+        partner_cuit = self.partner_id.l10n_ar_vat or ""
+        if partner_cuit and cuit and partner_cuit != cuit:
+            _logger.warning(
+                "Using certificate CUIT %s for ARCA WS (company partner VAT is %s)",
+                cuit,
+                partner_cuit,
+            )
+        return cuit
+
     def get_key_and_certificate(self, environment_type):
         """
         Funcion que busca para el environment_type definido,
