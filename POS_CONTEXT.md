@@ -53,6 +53,15 @@ diagnostic was lost because the `UserError` rolled back the write).
 **Data change ⇒ requires `-u l10n_ar_fiscal_ws_fe`** or the DB's
 `response_dict` stays stale.
 
+Rejection persistence (PR #104 port, W3): on a single-invoice rejection,
+`do_pyafipws_request_cae` commits right after writing the rejection
+(`afip_result='R'`, `afip_message`, request/response XML) so the draft invoice
+keeps the diagnostics instead of losing them when `_post` raises the
+`UserError` and rolls the transaction back. Caveat: PostgreSQL has no partial
+commits, so the commit flushes the whole transaction-so-far; in a multi-order
+POS sync earlier orders become durable before a later failure aborts the batch
+(same semantics as the pre-existing success-path commit).
+
 ## Homologation health check
 
 ```bash
