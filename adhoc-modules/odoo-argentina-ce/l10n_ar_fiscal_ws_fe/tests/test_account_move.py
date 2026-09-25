@@ -149,13 +149,44 @@ class TestAccountMoveArcaHelpers(TransactionCase):
             method.call_arca_method(
                 obj=invoice,
                 mode="exec",
-                extra_values={"next_invoice_number": 1, "amounts": amounts, "arca_document_code": "80"},
+                extra_values={
+                    "next_invoice_number": 1,
+                    "amounts": amounts,
+                    "arca_document_code": "80",
+                    "condicion_iva_receptor": invoice._l10n_ar_get_receptor_vat_condition(),
+                },
             )
         request = captured["data"]["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]
         self.assertEqual(request["Concepto"], 1)
         self.assertEqual(request["CanMisMonExt"], "N")
         self.assertEqual(request["MonCotiz"], 1.0)
+        self.assertEqual(request["CondicionIVAReceptorId"], 1)
         self.assertEqual(captured["data"]["Auth"]["Cuit"], "20431432227")
+
+    def test_request_requires_receptor_vat_condition(self):
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Partner without AFIP responsibility",
+                "vat": "20111111112",
+                "country_id": self.env.ref("base.ar").id,
+            }
+        )
+        invoice = self._create_invoice(partner_id=partner.id)
+        with self.assertRaises(UserError):
+            invoice._l10n_ar_get_receptor_vat_condition()
+
+    def test_request_rejects_deprecated_vat_condition(self):
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Deprecated responsibility partner",
+                "vat": "20111111112",
+                "country_id": self.env.ref("base.ar").id,
+                "l10n_ar_afip_responsibility_type_id": self.env.ref("l10n_ar.res_IVARNI").id,
+            }
+        )
+        invoice = self._create_invoice(partner_id=partner.id)
+        with self.assertRaises(UserError):
+            invoice._l10n_ar_get_receptor_vat_condition()
 
     def test_request_template_includes_cbtesasoc_for_credit_note(self):
         origin = self._create_invoice(
@@ -191,7 +222,12 @@ class TestAccountMoveArcaHelpers(TransactionCase):
             method.call_arca_method(
                 obj=credit_note,
                 mode="exec",
-                extra_values={"next_invoice_number": 1, "amounts": amounts, "arca_document_code": "99"},
+                extra_values={
+                    "next_invoice_number": 1,
+                    "amounts": amounts,
+                    "arca_document_code": "99",
+                    "condicion_iva_receptor": credit_note._l10n_ar_get_receptor_vat_condition(),
+                },
             )
         asoc = captured["data"]["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["CbtesAsoc"]
         self.assertEqual(len(asoc), 1)

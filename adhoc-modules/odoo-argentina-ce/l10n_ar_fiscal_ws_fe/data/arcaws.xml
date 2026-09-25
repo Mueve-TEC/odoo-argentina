@@ -214,7 +214,7 @@ result["FeCAEReq"]["FeDetReq"] = {
         "MonId": self.currency_id.l10n_ar_afip_code,
         "MonCotiz": 1.0 / rate,
         "CanMisMonExt": self.l10n_ar_payment_foreign_currency or "N",
-        "CondicionIVAReceptorId": int(self.partner_id.l10n_ar_afip_responsibility_type_id.code),
+        "CondicionIVAReceptorId": extra_values['condicion_iva_receptor'],
     }
 }
 if vats := self._get_vat():

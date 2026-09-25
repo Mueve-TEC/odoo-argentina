@@ -13,6 +13,10 @@ from odoo.tools import float_repr
 
 _logger = logging.getLogger(__name__)
 
+# "Condición frente al IVA del receptor" codes accepted by ARCA for WSFEv1
+# (RG 5616, mandatory since 01/12/2026). Mirrors FEParamGetCondicionIvaReceptor.
+ARCA_VAT_CONDITION_CODES = {"1", "4", "5", "6", "7", "8", "9", "10", "13", "15", "16"}
+
 
 class AccountMove(models.Model):
     _inherit = "account.move"
@@ -348,6 +352,42 @@ class AccountMove(models.Model):
             }
         )
 
+    def _l10n_ar_get_receptor_vat_condition(self):
+        """Return the integer "Condición frente al IVA del receptor" code.
+
+        Mandatory in the WSFE request since RG 5616 (01/12/2026). We read it
+        from the commercial partner (same source as the QR code) and validate
+        it against ARCA's allowed values so we fail with a clear message
+        instead of silently sending ``0`` or an invalid value.
+        """
+        self.ensure_one()
+        responsibility = self.commercial_partner_id.l10n_ar_afip_responsibility_type_id
+        if not responsibility or not responsibility.code:
+            raise UserError(
+                _(
+                    "No se puede solicitar el CAE: el receptor '%s' no tiene configurada la "
+                    "Condición frente al IVA del receptor (Tipo de Responsabilidad AFIP), "
+                    "obligatoria según RG 5616. Configúrela en Contactos > Información de "
+                    "facturación."
+                )
+                % self.commercial_partner_id.display_name
+            )
+        code = str(responsibility.code)
+        if code not in ARCA_VAT_CONDITION_CODES:
+            raise UserError(
+                _(
+                    "No se puede solicitar el CAE: el código de Condición frente al IVA del "
+                    "receptor '%(code)s' de '%(partner)s' no es un valor permitido por ARCA "
+                    "(RG 5616). Valores válidos: %(allowed)s."
+                )
+                % {
+                    "code": code,
+                    "partner": self.commercial_partner_id.display_name,
+                    "allowed": ", ".join(sorted(ARCA_VAT_CONDITION_CODES, key=int)),
+                }
+            )
+        return int(code)
+
     def do_pyafipws_request_cae(self):
         "Request to AFIP the invoices' Authorization Electronic Code (CAE)"
         a_invoices = r_invoices = self.env["account.move"]
@@ -387,6 +427,7 @@ class AccountMove(models.Model):
             inv.l10n_latam_document_number = document_number
             response = {}
             try:
+                condicion_iva_receptor = inv._l10n_ar_get_receptor_vat_condition()
                 method_id = arcaws.method_ids.filtered(lambda m: m.name == "request_invoice_authorization")
                 if method_id:
                     response = method_id.call_arca_method(
@@ -396,6 +437,7 @@ class AccountMove(models.Model):
                             "next_invoice_number": next_invoice_number,
                             "amounts": amounts,
                             "arca_document_code": arca_document_code,
+                            "condicion_iva_receptor": condicion_iva_receptor,
                         },
                     )
             except Exception as e:
