@@ -8,8 +8,6 @@ from odoo.exceptions import UserError,ValidationError
 import base64
 from io import BytesIO
 import logging
-import sys
-import traceback
 from datetime import datetime, date
 
 import qrcode
@@ -260,31 +258,79 @@ class AccountMove(models.Model):
         # that happens if you choose the modify option of the credit note
         # wizard. A mapping of which documents can be reported as related
         # documents would be a better solution
-        if self.l10n_latam_document_type_id.internal_type in ['debit_note', 'credit_note'] \
-                and self.invoice_origin:
-            return self.search([
-                ('commercial_partner_id', '=', self.commercial_partner_id.id),
-                ('company_id', '=', self.company_id.id),
-                ('document_number', '=', self.invoice_origin),
-                ('id', '!=', self.id),
-                ('l10n_latam_document_type_id.l10n_ar_letter', '=', self.l10n_latam_document_type_id.l10n_ar_letter),
-                ('l10n_latam_document_type_id', '!=', self.l10n_latam_document_type_id.id),
-                ('state', 'not in', ['draft', 'cancel'])],
-                limit=1)
-        else:
+        if self.l10n_latam_document_type_id.internal_type not in [
+                'debit_note', 'credit_note']:
             return self.browse()
+        # POS refunds (and the reversal wizard) set `reversed_entry_id` to the
+        # original invoice. This is the only reliable link from POS, where
+        # `invoice_origin` holds the POS order name instead of the document
+        # number.
+        if self.reversed_entry_id:
+            return self.reversed_entry_id
+        if not self.invoice_origin:
+            return self.browse()
+        return self.search([
+            ('commercial_partner_id', '=', self.commercial_partner_id.id),
+            ('company_id', '=', self.company_id.id),
+            ('document_number', '=', self.invoice_origin),
+            ('id', '!=', self.id),
+            ('l10n_latam_document_type_id.l10n_ar_letter', '=', self.l10n_latam_document_type_id.l10n_ar_letter),
+            ('l10n_latam_document_type_id', '!=', self.l10n_latam_document_type_id.id),
+            ('state', 'not in', ['draft', 'cancel'])],
+            limit=1)
+
+    def _l10n_ar_safe_document_number_parts(self):
+        """Return (point_of_sale, number) as ints from the AFIP document number.
+
+        Accepts 'PPPPP-NNNNNNNN' (optionally with a prefix) and falls back to
+        the journal point of sale. Raises a clear error when the number cannot
+        be used to inform a related voucher (CbteAsoc).
+        """
+        self.ensure_one()
+        number = (self.document_number or '').strip()
+        if not number and 'l10n_latam_document_number' in self._fields:
+            number = (self.l10n_latam_document_number or '').strip()
+        parts = [p for p in number.replace(' ', '-').split('-') if p]
+        try:
+            if len(parts) >= 2:
+                return int(parts[-2]), int(parts[-1])
+            if len(parts) == 1:
+                return self.journal_id.l10n_ar_afip_pos_number, int(parts[0])
+        except (TypeError, ValueError):
+            pass
+        raise UserError(_(
+            'El comprobante relacionado %s no tiene un número de documento '
+            'AFIP válido para informar como comprobante asociado (CbteAsoc). '
+            'Debe estar autorizado por AFIP antes de emitir la nota.') % (
+                self.display_name))
 
     def action_post(self):
-        """
-        The last thing we do is request the cae because if an error occurs
-        after cae requested, the invoice has been already validated on afip
+        """Post the move, requesting the AFIP CAE first.
+
+        The CAE is requested *before* the move is posted so that a rejected
+        invoice is never confirmed in the journal (it stays in draft with the
+        ARCA diagnostics persisted). On success the CAE is committed because
+        it is irrevocable, and only then the move is posted normally.
         """
         for rec in self:
             rec.compute_taxes()
-        res = super(AccountMove, self).action_post()
         self.check_afip_auth_verify_required()
         self.do_pyafipws_request_cae()
+        res = super(AccountMove, self).action_post()
+        self._l10n_ar_set_document_numbers()
         return res
+
+    def _l10n_ar_set_document_numbers(self):
+        """Set the final document name from the CAE-authorized number.
+
+        The number requested to AFIP may differ from the one assigned by the
+        local (latam) sequence, so we keep the AFIP number authoritative.
+        """
+        for inv in self.filtered(
+                lambda x: x.state == 'posted' and x.afip_auth_code and
+                x.document_number):
+            prefix = inv.l10n_latam_document_type_id.doc_code_prefix or ''
+            inv.name = ('%s %s' % (prefix, inv.document_number)).strip()
 
     # para cuando se crea, por ej, desde ventas o contratos
     @api.constrains('partner_id')
@@ -426,16 +472,8 @@ print "Observaciones:", wscdc.Obs
                 msg = 'Falla SOAP %s: %s' % (
                     fault.faultcode, fault.faultstring)
             except Exception as e:
-                msg = e
-            except Exception:
-                if ws.Excepcion:
-                    # get the exception already parsed by the helper
-                    msg = ws.Excepcion
-                else:
-                    # avoid encoding problem when raising error
-                    msg = traceback.format_exception_only(
-                        sys.exc_type,
-                        sys.exc_value)[0]
+                # get the exception already parsed by the helper if any
+                msg = getattr(ws, 'Excepcion', None) or e
             if msg:
                 raise UserError(_('AFIP Verification Error. %s' % msg))
 
@@ -443,6 +481,55 @@ print "Observaciones:", wscdc.Obs
                 'afip_auth_verify_result': ws.Resultado,
                 'afip_auth_verify_observation': '%s%s' % (ws.Obs, ws.ErrMsg)
             })
+
+    def _l10n_ar_check_letter_c_amounts(self):
+        """Raise a clear error for letter C vouchers carrying VAT amounts.
+
+        ARCA rejects type-C vouchers that inform IVA / no gravado / exento
+        (error 10043) and the raw message is hard to interpret. Detect the
+        configuration problem before any ARCA call.
+        """
+        self.ensure_one()
+        if self.l10n_latam_document_type_id.l10n_ar_letter != 'C':
+            return
+        # Amounts are computed from the AFIP VAT code (like Odoo 19
+        # `_l10n_ar_get_amounts`) instead of the custom `tax_type` field, which
+        # may be unset on some databases.
+        vat_amount = 0.0
+        untaxed_amount = 0.0
+        exempt_amount = 0.0
+        for move_tax in self.move_tax_ids:
+            vat_afip_code = move_tax.tax_id.tax_group_id.l10n_ar_vat_afip_code
+            if vat_afip_code == '1':
+                untaxed_amount += move_tax.base_amount
+            elif vat_afip_code == '2':
+                exempt_amount += move_tax.base_amount
+            elif vat_afip_code:
+                vat_amount += move_tax.tax_amount
+        problems = []
+        if abs(vat_amount) >= 0.005:
+            problems.append('IVA %s' % vat_amount)
+        if abs(untaxed_amount) >= 0.005:
+            problems.append('no gravado %s' % untaxed_amount)
+        if abs(exempt_amount) >= 0.005:
+            problems.append('exento %s' % exempt_amount)
+        if problems:
+            responsibility = (
+                self.company_id.partner_id.
+                l10n_ar_afip_responsibility_type_id.name or
+                _('exenta/monotributista'))
+            raise UserError(_(
+                'No se puede solicitar el CAE: %(document)s es un comprobante '
+                'clase C y ARCA exige que ImpTotConc, ImpOpEx e ImpIVA sean '
+                'cero para este tipo de comprobante. Importes detectados: '
+                '%(problems)s. La empresa «%(company)s» está configurada como '
+                '«%(responsibility)s» y emite comprobantes tipo C: revise los '
+                'impuestos de venta de los productos facturados (p. ej. quitar '
+                'IVA 21%% o «IVA No Gravado» de los productos).') % {
+                    'document': self.l10n_latam_document_type_id.display_name,
+                    'problems': ', '.join(problems),
+                    'company': self.company_id.name,
+                    'responsibility': responsibility})
 
     def do_pyafipws_request_cae(self):
         "Request to AFIP the invoices' Authorization Electronic Code (CAE)"
@@ -462,6 +549,15 @@ print "Observaciones:", wscdc.Obs
                 raise UserError(_(
                     'If you use electronic journals (invoice id %s) you need '
                     'configure AFIP WS on the journal') % (inv.id))
+
+            # A missing date would crash while building the AFIP request. Mirror
+            # core `_post` and default it to today for sale documents.
+            if not inv.invoice_date:
+                inv.invoice_date = fields.Date.context_today(inv)
+
+            # Fail with a clear message before hitting ARCA (error 10043).
+            if inv.move_type in ['out_invoice', 'out_refund']:
+                inv._l10n_ar_check_letter_c_amounts()
 
             # if no validation type and we are on electronic invoice, it means
             # that we are on a testing database without homologation
@@ -731,34 +827,42 @@ print "Observaciones:", wscdc.Obs
 
             # TODO ver si en realidad tenemos que usar un vat pero no lo
             # subimos
-            if afip_ws not in ['wsfex', 'wsbfe']:
-                #for vat in inv.move_tax_ids:vat_taxable_ids:
+            # Align with Odoo 19 `l10n_ar._get_vat`: the IVA object only informs
+            # taxes with an AFIP VAT code not in (False, 0, 1, 2); code 3 is
+            # reported with Importe 0. Type-C vouchers must not inform the IVA
+            # object at all (ARCA error 10071).
+            if afip_ws not in ['wsfex', 'wsbfe'] and \
+                    inv.l10n_latam_document_type_id.l10n_ar_letter != 'C':
                 for vat in inv.move_tax_ids:
-                    if vat.tax_id.tax_group_id.tax_type == 'vat' and vat.tax_id.tax_group_id.l10n_ar_vat_afip_code != '2':
-                            _logger.info('Adding VAT %s' % vat.tax_id.tax_group_id.name)
-                            ws.AgregarIva(
-                                vat.tax_id.tax_group_id.l10n_ar_vat_afip_code,
-                                "%.2f" % vat.base_amount,
-                                # "%.2f" % abs(vat.base_amount),
-                                "%.2f" % vat.tax_amount,
-                            )
+                    vat_afip_code = vat.tax_id.tax_group_id.l10n_ar_vat_afip_code
+                    if vat_afip_code in (False, '0', '1', '2'):
+                        continue
+                    vat_amount = 0.0 if vat_afip_code == '3' else vat.tax_amount
+                    if vat.base_amount or vat_amount:
+                        _logger.info('Adding VAT %s' % vat.tax_id.tax_group_id.name)
+                        ws.AgregarIva(
+                            vat_afip_code,
+                            "%.2f" % vat.base_amount,
+                            "%.2f" % vat_amount,
+                        )
 
 
             if CbteAsoc:
                 # fex no acepta fecha
-                doc_number = CbteAsoc.document_number.split('-')[1]
+                doc_pos_number, doc_number = \
+                    CbteAsoc._l10n_ar_safe_document_number_parts()
                 invoice_date = str(CbteAsoc.invoice_date).replace('-','')
                 if afip_ws == 'wsfex':
                     ws.AgregarCmpAsoc(
                         CbteAsoc.l10n_latam_document_type_id.document_type_id.code,
-                        CbteAsoc.journal_id.l10n_ar_afip_pos_number,
+                        doc_pos_number,
                         doc_number,
                         self.company_id.vat,
                     )
                 else:
                     ws.AgregarCmpAsoc(
                         CbteAsoc.l10n_latam_document_type_id.code,
-                        CbteAsoc.journal_id.l10n_ar_afip_pos_number,
+                        doc_pos_number,
                         doc_number,
                         self.company_id.vat,
                         invoice_date,
@@ -851,23 +955,24 @@ print "Observaciones:", wscdc.Obs
                 msg = 'Falla SOAP %s: %s' % (
                     fault.faultcode, fault.faultstring)
             except Exception as e:
-                msg = e
-            except Exception:
-                if ws.Excepcion:
-                    # get the exception already parsed by the helper
-                    msg = ws.Excepcion
-                else:
-                    # avoid encoding problem when raising error
-                    msg = traceback.format_exception_only(
-                        sys.exc_type,
-                        sys.exc_value)[0]
+                # get the exception already parsed by the helper if any
+                msg = getattr(ws, 'Excepcion', None) or e
             if msg:
-                _logger.info(_('AFIP Validation Error. %s' % msg)+' XML Request: %s XML Response: %s' % (
-                    ws.XmlRequest, ws.XmlResponse))
+                _logger.error(_('AFIP Validation Error. %s') % msg +
+                              ' XML Request: %s XML Response: %s' % (
+                                  getattr(ws, 'XmlRequest', ''),
+                                  getattr(ws, 'XmlResponse', '')))
+                inv._l10n_ar_persist_cae_rejection(
+                    msg, getattr(ws, 'XmlRequest', False),
+                    getattr(ws, 'XmlResponse', False))
                 raise UserError(_('AFIP Validation Error. %s' % msg))
 
             msg = u"\n".join([ws.Obs or "", ws.ErrMsg or ""])
             if not ws.CAE or ws.Resultado != 'A':
+                _logger.error(_('AFIP Rejected Invoice. %s') % msg)
+                inv._l10n_ar_persist_cae_rejection(
+                    msg, getattr(ws, 'XmlRequest', False),
+                    getattr(ws, 'XmlResponse', False))
                 raise UserError(_('AFIP Validation Error. %s' % msg))
             # TODO ver que algunso campos no tienen sentido porque solo se
             # escribe aca si no hay errores
@@ -886,7 +991,6 @@ print "Observaciones:", wscdc.Obs
                 'afip_xml_request': ws.XmlRequest,
                 'afip_xml_response': ws.XmlResponse,
                 'document_number': str(pos_number).zfill(5) + '-' + str(cbte_nro).zfill(8),
-                'name': inv.l10n_latam_document_type_id.doc_code_prefix + ' ' + str(pos_number).zfill(5) + '-' + str(cbte_nro).zfill(8),
             })
             # si obtuvimos el cae hacemos el commit porque estoya no se puede
             # volver atras
@@ -895,6 +999,25 @@ print "Observaciones:", wscdc.Obs
             # solicitar. Lo mismo podriamos usar para grabar los mensajes de
             # afip de respuesta
             inv._cr.commit()
+
+    def _l10n_ar_persist_cae_rejection(self, msg, xml_request, xml_response):
+        """Persist the ARCA rejection diagnostics on the (still draft) move.
+
+        The move is not posted when AFIP rejects it, but the UserError raised
+        afterwards would roll back the write, losing the diagnostics. We write
+        them and commit so they remain visible on the draft invoice.
+
+        PostgreSQL has no partial commits: this flushes the whole transaction
+        so far (same semantics as the pre-existing success-path commit).
+        """
+        self.ensure_one()
+        self.sudo().write({
+            'afip_result': 'R',
+            'afip_message': msg,
+            'afip_xml_request': xml_request,
+            'afip_xml_response': xml_response,
+        })
+        self.env.cr.commit()
 
 
     def _compute_qrcode(self):
@@ -907,18 +1030,30 @@ print "Observaciones:", wscdc.Obs
                     box_size=10,
                     border=4,
                 )
+                # ARCA expects doc type 99 / doc number 0 for receivers
+                # without identification (e.g. Consumidor Final), not a crash.
+                doc_code = (rec.partner_id.l10n_latam_identification_type_id.
+                            l10n_ar_afip_code or '99')
+                try:
+                    doc_number = int(rec.partner_id.vat)
+                except (TypeError, ValueError):
+                    doc_number = 0
+                try:
+                    doc_number_cmp = int(rec.document_number.split('-')[1])
+                except (AttributeError, IndexError, ValueError):
+                    doc_number_cmp = 0
                 vals_qr = {
                     "ver": 1,
                     "fecha": str(rec.invoice_date),
-                    "cuit": int(rec.company_id.partner_id.vat),
+                    "cuit": int(rec.company_id.partner_id.vat or 0),
                     "ptoVta": rec.journal_id.l10n_ar_afip_pos_number,
                     "tipoCmp": int(rec.l10n_latam_document_type_id.code),
-                    "nroCmp": int(rec.name.split('-')[2]),
+                    "nroCmp": doc_number_cmp,
                     "importe": rec.amount_total,
                     "moneda": rec.currency_id.l10n_ar_afip_code,
                     "ctz": rec.l10n_ar_currency_rate,
-                    "tipoDocRec": int(rec.partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code),
-                    "nroDocRec": int(rec.partner_id.vat),
+                    "tipoDocRec": int(doc_code),
+                    "nroDocRec": doc_number,
                     "tipoCodAut": 'E',
                     "codAut": rec.afip_auth_code,
                 }

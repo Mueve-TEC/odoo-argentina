@@ -132,14 +132,22 @@ class L10nLatamDocumentType(models.Model):
             sequence = self.env['ir.sequence'].search([('journal_id','=',invoice.journal_id.id),('l10n_latam_document_type_id','=',invoice.l10n_latam_document_type_id.id)])
         else:
             sequence = sequence
-        if not sequence or len(sequence) > 1:
-            raise UserError('Problema de configuracion de secuencias')
-        next_local = sequence.number_next_actual
-        if next_ws != next_local:
+        if not sequence:
+            # Document types without a local sequence configured (e.g. POS
+            # credit notes) are still valid: the AFIP number is authoritative
+            # (same behaviour as Odoo 19 `_get_last_invoice_number`).
             msg = _(
-                'ERROR! Local (%i) and remote (%i) next number '
-                'mismatch!\n') % (next_local, next_ws) + msg
+                'No local sequence configured for document type %s. Using '
+                'the AFIP next number %s.\n') % (document_type, next_ws) + msg
+        elif len(sequence) > 1:
+            raise UserError('Problema de configuracion de secuencias')
         else:
-            msg = _('OK! Local and remote next number match!') + msg
+            next_local = sequence.number_next_actual
+            if next_ws != next_local:
+                msg = _(
+                    'ERROR! Local (%i) and remote (%i) next number '
+                    'mismatch!\n') % (next_local, next_ws) + msg
+            else:
+                msg = _('OK! Local and remote next number match!') + msg
         title = _('Last Invoice %s\n' % last)
         return {'msg': (title + msg), 'result': last}
