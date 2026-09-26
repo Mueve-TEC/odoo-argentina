@@ -1,3 +1,5 @@
-.js_invoice {
-	display: none;
-}
+/*
+ * The invoice button (`.js_invoice`) is intentionally *not* hidden anymore:
+ * cashiers can choose whether the sale generates its invoice. The default is
+ * still "to invoice" (see pos.order.to_invoice default=True).
+ */

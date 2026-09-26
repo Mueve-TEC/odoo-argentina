@@ -2,23 +2,26 @@ from odoo import fields, models, _, api
 from odoo.exceptions import UserError
 from functools import partial
 
-import json
-import base64
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class PosOrder(models.Model):
     _inherit = 'pos.order'
 
     to_invoice = fields.Boolean('To invoice', default=True)
 
-
     @api.model
     def _order_fields(self, ui_order):
         process_line = partial(self.env['pos.order.line']._order_line_fields, session_id=ui_order['pos_session_id'])
         if not ui_order.get('partner_id'):
             ui_order['partner_id'] = self.env.ref('l10n_ar.par_cfa') and self.env.ref('l10n_ar.par_cfa').id or False
+        # Refunds must always be invoiced because they need the related credit
+        # note, no matter what the frontend sends.
+        to_invoice = ui_order.get('to_invoice', True)
+        if ui_order.get('amount_total', 0) < 0:
+            to_invoice = True
         return {
             'user_id':      ui_order['user_id'] or False,
             'session_id':   ui_order['pos_session_id'],
@@ -34,31 +37,62 @@ class PosOrder(models.Model):
             'amount_tax':  ui_order['amount_tax'],
             'amount_return':  ui_order['amount_return'],
             'company_id': self.env['pos.session'].browse(ui_order['pos_session_id']).company_id.id,
-            'to_invoice': ui_order['to_invoice'] if "to_invoice" in ui_order else False,
+            'to_invoice': to_invoice,
             'to_ship': ui_order['to_ship'] if "to_ship" in ui_order else False,
             'is_tipped': ui_order.get('is_tipped', False),
             'tip_amount': ui_order.get('tip_amount', 0),
         }
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        # Refunds (negative orders) must always generate their credit note.
+        for values in vals_list:
+            if values.get('amount_total', 0) < 0:
+                values['to_invoice'] = True
+        return super(PosOrder, self).create(vals_list)
 
+    def _prepare_invoice_vals(self):
+        """Make POS refunds reference the original ARCA electronic invoice.
 
-    @api.model
-    def create(self, values):
-        values['to_invoice'] = True
-        return super(PosOrder, self).create(values)
-
-
-    def _is_electronic_invoice_journal(self, journal):
-        """Check if a journal is configured for AFIP electronic invoicing"""
-        return (
-            journal.l10n_ar_afip_pos_system in ['RLI_RLM', 'FEERCEL'] and
-            hasattr(journal, 'afip_ws') and
-            journal.afip_ws
-        )
-
+        The credit note must inform the associated voucher (CbteAsoc) using the
+        point of sale and number of the original invoice, so we keep
+        `reversed_entry_id` pointing to it (``get_related_invoices_data`` reads
+        that field). Without it, a POS refund cannot be authorized by ARCA.
+        """
+        origin_orders = self.refunded_order_ids
+        # Core would crash with "Expected singleton" when a single refund
+        # references several invoiced orders; raise something readable instead.
+        if len(origin_orders.mapped('account_move')) > 1:
+            raise UserError(_(
+                'Solo se puede devolver una factura electrónica a la vez.'))
+        vals = super()._prepare_invoice_vals()
+        if self.amount_total >= 0:
+            return vals
+        origin_invoices = origin_orders.mapped('account_move').filtered(
+            lambda move: move.journal_id.l10n_ar_afip_pos_system in
+            ['RLI_RLM', 'FEERCEL'])
+        electronic = origin_invoices.filtered(lambda move: move.afip_auth_code)
+        if len(electronic) > 1:
+            raise UserError(_(
+                'Solo se puede devolver una factura electrónica a la vez.'))
+        if electronic:
+            vals['reversed_entry_id'] = electronic.id
+        elif origin_invoices:
+            raise UserError(_(
+                'No se encontró la factura electrónica original con CAE para '
+                'la devolución. La nota de crédito debe informar el punto de '
+                'venta y número de la factura original (CbteAsoc). Verifique '
+                'que la factura original esté autorizada por AFIP.'))
+        return vals
 
     def _generate_pos_order_invoice(self):
-        """Override to integrate AFIP validation for electronic invoices"""
+        """Generate the invoice for the validated POS orders.
+
+        The invoice is posted *before* the order is linked/marked as invoiced.
+        For electronic journals the CAE is requested before the move is posted
+        (see ``l10n_ar_afipws_fe.action_post``), so a rejected invoice stays in
+        draft and never shows up confirmed in the journal.
+        """
         moves = self.env['account.move']
         logger.info('Generating invoices for POS orders during validation: %s', self.mapped('name'))
 
@@ -75,32 +109,13 @@ class PosOrder(models.Model):
             move_vals = order._prepare_invoice_vals()
             new_move = order._create_invoice(move_vals)
 
+            new_move.sudo().with_company(order.company_id).with_context(
+                skip_invoice_sync=True).action_post()
+
+            # Link the order only once the invoice was actually posted.
             order.write({'account_move': new_move.id, 'state': 'invoiced'})
-
-            # Check if journal is configured for AFIP electronic invoicing
-            is_electronic_journal = order._is_electronic_invoice_journal(new_move.journal_id)
-
-            if is_electronic_journal:
-                logger.info('Processing electronic invoice %s for POS order %s', new_move.name, order.name)
-                
-                try:
-                    # Post the invoice to trigger AFIP validation
-                    new_move.sudo().with_company(order.company_id).action_post()
-                    logger.info('Electronic invoice %s processed successfully', new_move.name)
-                    logger.info('AFIP CAE for invoice %s: %s', new_move.name, new_move.afip_auth_code)    
-
-                except Exception as e:
-                    logger.error('Error processing electronic invoice %s: %s', new_move.name, str(e))
-                    # Keep invoice in draft state and show error message
-                    new_move.message_post(body=_('Error processing electronic invoice: %s') % str(e))
-                    
-                    raise UserError(_('Error processing AFIP electronic invoice: %s') % str(e))
-                    
-            else:
-                # For non-electronic invoices, we use the standard post method
-                new_move.sudo().with_company(order.company_id).with_context(skip_invoice_sync=True)._post()
-
             moves += new_move
+
             payment_moves = order._apply_invoice_payments(order.session_id.state == 'closed')
             if order.session_id.state == 'closed':  # If the session isn't closed this isn't needed.
                 # If a client requires the invoice later, we need to revers the amount from the closing entry, by making a new entry for that.
@@ -118,6 +133,5 @@ class PosOrder(models.Model):
             'type': 'ir.actions.act_window',
             'nodestroy': True,
             'target': 'current',
-            'res_id': moves and moves.ids[0] or False,
+            'res_id': moves.ids[0] if moves else False,
         }
-
