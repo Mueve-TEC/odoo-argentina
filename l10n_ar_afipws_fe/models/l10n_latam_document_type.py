@@ -5,6 +5,7 @@
 from odoo import models, api, fields, _
 from odoo.exceptions import UserError
 import logging
+from .afip_ws_utils import is_arca_unavailable_error, raise_arca_unavailable
 
 _logger = logging.getLogger(__name__)
 
@@ -102,7 +103,14 @@ class L10nLatamDocumentType(models.Model):
         if not afip_ws:
             return (_('No AFIP WS selected on point of sale %s') % (
                 invoice.journal_id.name))
-        ws = company.get_connection(afip_ws).connect()
+        try:
+            ws = company.get_connection(afip_ws).connect()
+        except Exception as error:
+            _logger.error(
+                'Error connecting to ARCA WS %s: %s', afip_ws, error)
+            if is_arca_unavailable_error(error):
+                raise_arca_unavailable(afip_ws, error)
+            raise
         # call the webservice method to get the last invoice at AFIP:
 
         try:
@@ -124,6 +132,15 @@ class L10nLatamDocumentType(models.Model):
                 raise UserError(_(
                     'Hubo un error al conectarse a AFIP, contacte a su'
                     ' proveedor de Odoo para mas información'))
+        except Exception as error:
+            _logger.error(
+                'Error querying last invoice to ARCA WS %s: %s',
+                afip_ws, error)
+            if is_arca_unavailable_error(error):
+                raise_arca_unavailable(afip_ws, error)
+            raise UserError(_(
+                'Hubo un error al conectarse a AFIP, contacte a su'
+                ' proveedor de Odoo para mas información'))
 
         msg = " - ".join([ws.Excepcion, ws.ErrMsg, ws.Obs])
 

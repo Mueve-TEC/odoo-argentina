@@ -5,6 +5,7 @@
 from .pyi25 import PyI25
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError,ValidationError
+from .afip_ws_utils import is_arca_unavailable_error, raise_arca_unavailable
 import base64
 from io import BytesIO
 import logging
@@ -585,7 +586,14 @@ print "Observaciones:", wscdc.Obs
             doc_afip_code = inv.l10n_latam_document_type_id.code
 
             # authenticate against AFIP:
-            ws = inv.company_id.get_connection(afip_ws).connect()
+            try:
+                ws = inv.company_id.get_connection(afip_ws).connect()
+            except Exception as error:
+                _logger.error(
+                    'Error connecting to ARCA WS %s: %s', afip_ws, error)
+                if is_arca_unavailable_error(error):
+                    raise_arca_unavailable(afip_ws, error)
+                raise
 
             if afip_ws == 'wsfex':
                 if not country:
@@ -958,6 +966,14 @@ print "Observaciones:", wscdc.Obs
                 # get the exception already parsed by the helper if any
                 msg = getattr(ws, 'Excepcion', None) or e
             if msg:
+                # A non-SOAP response (e.g. ARCA down, 500 HTML page) is not an
+                # invoice rejection: surface it clearly and do not persist it as
+                # a rejection on the move.
+                if is_arca_unavailable_error(msg):
+                    _logger.error(
+                        'ARCA unavailable while requesting CAE for %s: %s',
+                        inv.name, msg)
+                    raise_arca_unavailable(afip_ws, msg)
                 _logger.error(_('AFIP Validation Error. %s') % msg +
                               ' XML Request: %s XML Response: %s' % (
                                   getattr(ws, 'XmlRequest', ''),

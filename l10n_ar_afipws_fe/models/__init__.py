@@ -2,6 +2,7 @@
 # For copyright and license notices, see __manifest__.py file in module root
 # directory
 ##############################################################################
+from . import afip_ws_utils
 from . import move
 from . import l10n_latam_document_type
 from . import afipws_connection
