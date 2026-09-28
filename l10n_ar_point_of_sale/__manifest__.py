@@ -1,12 +1,18 @@
 {
     'name': 'l10n_ar_point_of_sale',
-    'version': '16.0.1.1.0',
+    'version': '16.0.1.3.0',
     'category': 'Accounting',
     'summary': 'Point of Sale',
     'depends': ['account','l10n_ar','l10n_ar_afipws_fe','point_of_sale'],
     'data': [
         'l10n_ar_point_of_sale.xml',
     ],
+    'assets': {
+        'point_of_sale.assets': [
+            'l10n_ar_point_of_sale/static/src/css/l10n_ar_point_of_sale.css',
+            'l10n_ar_point_of_sale/static/src/js/models.js',
+        ],
+    },
     'demo': [
         ],
     'css': [],

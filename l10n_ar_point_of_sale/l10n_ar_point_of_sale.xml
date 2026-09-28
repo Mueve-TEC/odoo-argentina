@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-	<template id="l10n_ar_point_of_sale_assets" inherit_id="point_of_sale.assets_common">
-		<xpath expr="." position="inside">
-			<link rel="stylesheet"
-				href="/l10n_ar_point_of_sale/static/src/css/l10n_ar_point_of_sale.css"/>
-		</xpath>
-	</template>
+	<!--
+		The invoice button (`.js_invoice`) must stay visible. Its stylesheet is
+		now bundled through the manifest (`point_of_sale.assets`) instead of
+		being linked as a raw static file: a stale copy of this module in
+		another addons path can shadow raw `/static/` files, but bundled assets
+		are always read from the module that declares them.
+	-->
+	<template id="l10n_ar_point_of_sale_assets" inherit_id="point_of_sale.assets_common"/>
 
 </odoo>
