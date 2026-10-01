@@ -1,0 +1,33 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* l10n_ar_point_of_sale
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 16.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-01 00:00+0000\n"
+"PO-Revision-Date: 2026-10-01 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Plural-Forms: \n"
+
+#. module: l10n_ar_point_of_sale
+#: model:ir.model.fields,field_description:l10n_ar_point_of_sale.field_pos_config__l10n_ar_default_to_invoice
+#: model:ir.model.fields,field_description:l10n_ar_point_of_sale.field_res_config_settings__pos_l10n_ar_default_to_invoice
+#: model_terms:ir.ui.view,arch_db:l10n_ar_point_of_sale.res_config_settings_view_form_l10n_ar_pos
+msgid "Invoice by default"
+msgstr "Facturar por defecto"
+
+#. module: l10n_ar_point_of_sale
+#: model:ir.model.fields,help:l10n_ar_point_of_sale.field_pos_config__l10n_ar_default_to_invoice
+msgid "If enabled, new orders are marked as \"To invoice\" by default. The cashier can still turn the toggle off on the payment screen."
+msgstr "Si está activo, los pedidos nuevos se marcan como \"A facturar\" por defecto. El cajero puede desactivar la opción en la pantalla de pago."
+
+#. module: l10n_ar_point_of_sale
+#: model_terms:ir.ui.view,arch_db:l10n_ar_point_of_sale.res_config_settings_view_form_l10n_ar_pos
+msgid "When enabled, every new order is marked as 'To invoice' by default. The cashier can still turn the toggle off on the payment screen."
+msgstr "Cuando está activo, cada pedido nuevo se marca como 'A facturar' por defecto. El cajero puede desactivar la opción en la pantalla de pago."
