@@ -7,6 +7,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class PosConfig(models.Model):
+    _inherit = 'pos.config'
+
+    l10n_ar_default_to_invoice = fields.Boolean(
+        string='Invoice by default',
+        default=True,
+        help='If enabled, new orders are marked as "To invoice" by default. '
+             'The cashier can still turn the toggle off on the payment screen.')
+
+
+class ResConfigSettings(models.TransientModel):
+    _inherit = 'res.config.settings'
+
+    pos_l10n_ar_default_to_invoice = fields.Boolean(
+        related='pos_config_id.l10n_ar_default_to_invoice',
+        readonly=False)
+
+
 class PosOrder(models.Model):
     _inherit = 'pos.order'
 
