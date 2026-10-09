@@ -1,7 +1,7 @@
 # pylint: disable=missing-module-docstring,pointless-statement
 {
     "name": "Punto de venta Factura Electrónica Argentina",
-    "version": "19.0.1.1.1",
+    "version": "19.0.1.1.3",
     "category": "Localization/Argentina",
     "author": "Mueve, ADHOC SA, Filoquin",
     "website": "https://mueve.org.ar/",
@@ -18,7 +18,8 @@
     "demo": [],
     "assets": {
         "point_of_sale._assets_pos": [
-            "l10n_ar_pos_afipws_fe/static/src/app/**/*",
+            "l10n_ar_pos_afipws_fe/static/src/app/models/*.js",
+            "l10n_ar_pos_afipws_fe/static/src/app/screens/*.js",
         ],
     },
     "images": [],
