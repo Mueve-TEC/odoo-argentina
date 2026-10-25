@@ -1,6 +1,6 @@
 {
     "name": "Factura Electrónica Argentina",
-    "version": "19.0.1.1.2",
+    "version": "19.0.1.1.3",
     "category": "Localization/Argentina",
     "author": "Mueve, ADHOC SA, Moldeo Interactive,Odoo Community Association (OCA)",
     "website": "https://mueve.org.ar/",

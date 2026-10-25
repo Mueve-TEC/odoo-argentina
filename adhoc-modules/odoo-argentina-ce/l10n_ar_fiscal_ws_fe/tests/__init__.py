@@ -4,3 +4,4 @@ from . import test_account_move
 from . import test_currency_rate
 from . import test_qr_code
 from . import test_rejection
+from . import test_request_payload

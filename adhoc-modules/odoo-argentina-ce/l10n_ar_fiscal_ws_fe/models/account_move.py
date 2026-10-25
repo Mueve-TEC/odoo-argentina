@@ -284,8 +284,9 @@ class AccountMove(models.Model):
                 _(
                     "The credit note must reference the original electronic invoice "
                     "(point of sale and number). Related invoice %s has no AFIP "
-                    "document number." % pool[:1].display_name
+                    "document number."
                 )
+                % pool[:1].display_name
             )
         return (with_number or pool)[:1]
 
@@ -411,12 +412,83 @@ class AccountMove(models.Model):
             if not inv.invoice_date:
                 raise UserError(_("Debe indicar la fecha de la factura antes de validar contra ARCA."))
 
+            # l10n_ar completa las fechas de servicio recién en _post() (después
+            # de nuestro pedido de CAE): si no lo hacemos acá, la plantilla
+            # evalúa FchServDesde/Hasta sobre False y revienta con AttributeError.
+            inv._set_afip_service_dates()
+            if inv.l10n_ar_afip_concept != "1" and not (
+                inv.l10n_ar_afip_service_start and inv.l10n_ar_afip_service_end
+            ):
+                raise UserError(
+                    _(
+                        "No se puede solicitar el CAE: la factura es de concepto ARCA "
+                        "«%s» (servicios/productos) pero no tiene fechas de servicio "
+                        "informadas. Cargue el período de servicio en Información "
+                        "adicional > Service Date y reintente."
+                    )
+                    % (inv.l10n_ar_afip_concept or _("sin definir"))
+                )
+
             # Obtener datos para mapeo
             msg = False
             base_lines = inv._get_rounded_base_and_tax_lines()[0]
             amounts = inv._l10n_ar_get_amounts(base_lines=base_lines)
             inv._l10n_ar_check_letter_c_amounts(amounts)
             next_invoice_number = int(inv.journal_id._get_last_invoice_number(inv.l10n_latam_document_type_id)) + 1
+
+            # El número de comprobante sale del contador de ARCA, pero el índice
+            # único de Odoo (name, journal_id) sólo mira la base local. Si el
+            # contador de ARCA está atrasado respecto de los comprobantes ya
+            # posteados (típico tras un reinicio de homologación), el CAE se
+            # pediría igual y recién al postear revienta
+            # "Ya existe otro asiento con el mismo nombre", con el CAE ya quemado
+            # y commiteado. Frenamos acá, antes de llamar a ARCA.
+            expected_name = inv._get_formatted_sequence(next_invoice_number)
+            blocking = self.env["account.move"].search(
+                [
+                    ("journal_id", "=", inv.journal_id.id),
+                    ("state", "=", "posted"),
+                    ("name", "=", expected_name),
+                    ("id", "!=", inv.id),
+                ],
+                limit=1,
+            )
+            if blocking:
+                raise UserError(
+                    _(
+                        "No se puede solicitar el CAE: el comprobante %(expected)s "
+                        "(número %(next)s), que es el que ARCA está esperando para "
+                        "este punto de venta, ya está ocupado por la factura "
+                        "%(blocking)s, posteada el %(date)s con CAE %(cae)s.\n"
+                        "\n"
+                        "Último comprobante autorizado en ARCA: %(arca_last)s.\n"
+                        "\n"
+                        "Esto ocurre cuando el contador de ARCA se reinicia "
+                        "(habitual en homologación) mientras esta base conserva "
+                        "comprobantes emitidos con esos números. El pedido se "
+                        "detiene antes de ARCA para no quemar un CAE que no se "
+                        "podría postear.\n"
+                        "\n"
+                        "Cómo corregirlo:\n"
+                        "· Homologación: eliminé o rehaga el comprobante local que "
+                        "bloquea (esos números ya no existen en ARCA), o elimine "
+                        "los comprobantes de prueba locales con número mayor al "
+                        "último de ARCA.\n"
+                        "· Producción: no reutilice números. Revisé por qué el "
+                        "contador de ARCA quedó atrasado (otra emisora en el mismo "
+                        "punto de venta, restauración de backup, …) antes de "
+                        "reintentar."
+                    )
+                    % {
+                        "expected": expected_name,
+                        "next": next_invoice_number,
+                        "blocking": blocking.display_name,
+                        "date": blocking.invoice_date or blocking.date,
+                        "cae": blocking.afip_auth_code or _("sin CAE"),
+                        "arca_last": next_invoice_number - 1,
+                    }
+                )
+
             arca_document_code = inv.partner_id.l10n_latam_identification_type_id.l10n_ar_afip_code
 
             # Esto no es necesario ahora ya que el numero se obtiene desde el result

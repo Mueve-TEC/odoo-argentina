@@ -218,8 +218,8 @@ result["FeCAEReq"]["FeDetReq"] = {
     }
 }
 if vats := self._get_vat():
+    AlicIva = []
     for vat in vats:
-        AlicIva = []
         if "BaseImp" in vat and "Importe" in vat:
             AlicIva.append(
                 {
@@ -233,7 +233,7 @@ if vats := self._get_vat():
 optionals = []
 if int(self.l10n_latam_document_type_id.code) in [201, 206, 211]:
     optionals.append({'Id': 27, 'Valor': self.company_id.l10n_ar_afip_fce_transmission})
-    if  self.partner_bank_id.acc_type == 'cbu':
+    if self.partner_bank_id.acc_type == 'cbu':
         optionals.append({'Id': 2101, 'Valor': self.partner_bank_id.acc_number})
     result["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["FchVtoPago"] = (
         self.invoice_date_due or self.invoice_date
@@ -246,12 +246,10 @@ if optionals:
     result["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["Opcionales"] = {'Opcional':optionals}
 
 if self.afip_associated_period_from and self.afip_associated_period_to:
-    result["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["PeriodoAsoc"]["FchDesde"] = (
-        self.afip_associated_period_from.strftime("%Y%m%d")
-    )
-    result["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["PeriodoAsoc"]["FchHasta"] = (
-        self.afip_associated_period_to.strftime("%Y%m%d")
-    )
+    result["FeCAEReq"]["FeDetReq"]["FECAEDetRequest"]["PeriodoAsoc"] = {
+        "FchDesde": self.afip_associated_period_from.strftime("%Y%m%d"),
+        "FchHasta": self.afip_associated_period_to.strftime("%Y%m%d"),
+    }
 elif related_invoice_ids := self.get_related_invoices_data():
     CbtesAsoc = []
     for related_invoice in related_invoice_ids:
@@ -274,6 +272,10 @@ if self.l10n_ar_afip_concept != "1":
         {
             "FchServDesde": self.l10n_ar_afip_service_start.strftime("%Y%m%d"),
             "FchServHasta": self.l10n_ar_afip_service_end.strftime("%Y%m%d"),
+            # ARCA 10035: FchVtoPago es obligatorio si se informa FchServDesde/Hasta
+            "FchVtoPago": (
+                self.invoice_date_due or self.invoice_date
+            ).strftime("%Y%m%d"),
         }
     )
 
