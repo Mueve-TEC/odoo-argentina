@@ -59,7 +59,7 @@ el prefijo `[FIX-adhoc]` en el mensaje de commit:
 [FIX-adhoc] <modulo>: <descripcion>
 ```
 
-Ejemplo (rama 18.0): `[FIX-adhoc] l10n_latam_check_ux: menu view fix`.
+Ejemplo (rama 19.0): `[FIX-adhoc] l10n_latam_check_ux: menu view fix`.
 
 Para auditar qué archivos de upstream tienen fixes locales pendientes sobre
 el último import:
@@ -72,3 +72,20 @@ Estos commits **no se envían a upstream**. Al hacer el siguiente
 `./scripts/pull-upstream.sh`, Git hará un merge 3-way y puede pedir resolver
 conflictos contra el nuevo upstream — eso es esperable y deseado: confirma
 que nuestro fix sigue siendo necesario sobre la nueva base.
+
+## Documentación
+
+- [MIGRATION_19.md](MIGRATION_19.md): estado de la migración a Odoo 19.
+- [POS_CONTEXT.md](POS_CONTEXT.md): contexto de POS y Web Services de ARCA.
+- Cada módulo incluye su propio `README.rst` con funcionalidad, instalación y
+  uso.
+
+## Licencia
+
+Consulte el campo `license` de cada módulo en su `__manifest__.py`. Los módulos
+de `mueve-modules` son AGPL-3.
+
+## Autores
+
+- [Mueve](https://www.mueve.org.ar/)
+- Módulos upstream: Ingeniería ADHOC y Odoo Community Association (OCA).
