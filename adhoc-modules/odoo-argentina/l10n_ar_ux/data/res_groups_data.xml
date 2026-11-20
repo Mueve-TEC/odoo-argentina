@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="True">
+<odoo>
+    <data noupdate="True">
+        <function model="res.groups" name="write">
+            <value model="res.groups" eval="[ref('base.group_user')]"/>
+            <value model="res.groups" eval="{'implied_ids': [(4, ref('l10n_ar_ux.group_include_pending_receivable_documents'))]}"/>
+        </function>
+    </data>
     <function model="res.groups" name="write">
-        <value model="res.groups" eval="[ref('base.group_user')]"/>
-        <value model="res.groups" eval="{'implied_ids': [(4, ref('l10n_ar_ux.group_include_pending_receivable_documents'))]}"/>
+        <value model="res.groups" eval="[ref('account.group_account_user')]"/>
+        <value model="res.groups" eval="{'implied_by_ids': [(4, ref('account.group_account_manager'))]}"/>
     </function>
 </odoo>
